@@ -1,0 +1,379 @@
+{
+  "info": {
+    "_postman_id": "9ff95dca-b217-4299-82f1-937d665e628f",
+    "name": "Weather Digest API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "26229025",
+    "_collection_link": "https://go.postman.co/collection/26229025-9ff95dca-b217-4299-82f1-937d665e628f?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Geocoding - Search city",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{geocodingBaseUrl}}/v1/search?name={{city}}&count=1&language=ru&format=json",
+          "host": [
+            "{{geocodingBaseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "name",
+              "value": "{{city}}"
+            },
+            {
+              "key": "count",
+              "value": "1"
+            },
+            {
+              "key": "language",
+              "value": "ru"
+            },
+            {
+              "key": "format",
+              "value": "json"
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "Geocoding - Search city",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{geocodingBaseUrl}}/v1/search?name={{city}}&count=1&language=ru&format=json",
+              "host": [
+                "{{geocodingBaseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "{{city}}"
+                },
+                {
+                  "key": "count",
+                  "value": "1"
+                },
+                {
+                  "key": "language",
+                  "value": "ru"
+                },
+                {
+                  "key": "format",
+                  "value": "json"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "date",
+              "value": "Sun, 13 Sep 2026 19:53:02 GMT"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "content-length",
+              "value": "239"
+            },
+            {
+              "key": "connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "x-encoding-time",
+              "value": "0.001990795135498047 ms"
+            },
+            {
+              "key": "content-encoding",
+              "value": "deflate"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"results\": [\n    {\n      \"id\": 524901,\n      \"name\": \"Москва\",\n      \"latitude\": 55.75204,\n      \"longitude\": 37.61781,\n      \"elevation\": 155,\n      \"feature_code\": \"PPLC\",\n      \"country_code\": \"RU\",\n      \"admin1_id\": 524894,\n      \"timezone\": \"Europe/Moscow\",\n      \"population\": 10381222,\n      \"country_id\": 2017370,\n      \"country\": \"Россия\",\n      \"admin1\": \"Москва\"\n    }\n  ],\n  \"generationtime_ms\": 1.2522936\n}"
+        },
+        {
+          "name": "Geocoding - Search city",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{geocodingBaseUrl}}/v1/search?name=Кисапппп&count=1&language=ru&format=json",
+              "host": [
+                "{{geocodingBaseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Кисапппп"
+                },
+                {
+                  "key": "count",
+                  "value": "1"
+                },
+                {
+                  "key": "language",
+                  "value": "ru"
+                },
+                {
+                  "key": "format",
+                  "value": "json"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "date",
+              "value": "Sun, 13 Sep 2026 19:53:51 GMT"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "content-length",
+              "value": "39"
+            },
+            {
+              "key": "connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "x-encoding-time",
+              "value": "0.005424022674560547 ms"
+            },
+            {
+              "key": "content-encoding",
+              "value": "deflate"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"generationtime_ms\": 4.0011406\n}"
+        }
+      ]
+    },
+    {
+      "name": "Forecast - Get weather",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{forecastBaseUrl}}/v1/forecast?latitude={{lat}}&longitude={{lon}}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days={{days}}&timezone=auto",
+          "host": [
+            "{{forecastBaseUrl}}"
+          ],
+          "path": [
+            "v1",
+            "forecast"
+          ],
+          "query": [
+            {
+              "key": "latitude",
+              "value": "{{lat}}"
+            },
+            {
+              "key": "longitude",
+              "value": "{{lon}}"
+            },
+            {
+              "key": "daily",
+              "value": "temperature_2m_max,temperature_2m_min,precipitation_sum"
+            },
+            {
+              "key": "forecast_days",
+              "value": "{{days}}"
+            },
+            {
+              "key": "timezone",
+              "value": "auto"
+            }
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "Forecast - Get weather",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{forecastBaseUrl}}/v1/forecast?latitude={{lat}}&longitude={{lon}}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days={{days}}&timezone=auto",
+              "host": [
+                "{{forecastBaseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "forecast"
+              ],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "{{lat}}"
+                },
+                {
+                  "key": "longitude",
+                  "value": "{{lon}}"
+                },
+                {
+                  "key": "daily",
+                  "value": "temperature_2m_max,temperature_2m_min,precipitation_sum"
+                },
+                {
+                  "key": "forecast_days",
+                  "value": "{{days}}"
+                },
+                {
+                  "key": "timezone",
+                  "value": "auto"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "date",
+              "value": "Sun, 13 Sep 2026 19:46:51 GMT"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "transfer-encoding",
+              "value": "chunked"
+            },
+            {
+              "key": "connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "content-encoding",
+              "value": "deflate"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"latitude\": 55.75,\n  \"longitude\": 37.625,\n  \"generationtime_ms\": 1.9869804382324219,\n  \"utc_offset_seconds\": 10800,\n  \"timezone\": \"Europe/Moscow\",\n  \"timezone_abbreviation\": \"GMT+3\",\n  \"elevation\": 149,\n  \"daily_units\": {\n    \"time\": \"iso8601\",\n    \"temperature_2m_max\": \"°C\",\n    \"temperature_2m_min\": \"°C\",\n    \"precipitation_sum\": \"mm\"\n  },\n  \"daily\": {\n    \"time\": [\n      \"2026-09-13\",\n      \"2026-09-14\",\n      \"2026-09-15\"\n    ],\n    \"temperature_2m_max\": [\n      16.2,\n      19.2,\n      17.3\n    ],\n    \"temperature_2m_min\": [\n      7.7,\n      9.1,\n      10.9\n    ],\n    \"precipitation_sum\": [\n      0,\n      0,\n      0.5\n    ]\n  }\n}"
+        },
+        {
+          "name": "Forecast - Get weather",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{forecastBaseUrl}}/v1/forecast?latitude=aschd&longitude={{lon}}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days={{days}}&timezone=auto",
+              "host": [
+                "{{forecastBaseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "forecast"
+              ],
+              "query": [
+                {
+                  "key": "latitude",
+                  "value": "aschd"
+                },
+                {
+                  "key": "longitude",
+                  "value": "{{lon}}"
+                },
+                {
+                  "key": "daily",
+                  "value": "temperature_2m_max,temperature_2m_min,precipitation_sum"
+                },
+                {
+                  "key": "forecast_days",
+                  "value": "{{days}}"
+                },
+                {
+                  "key": "timezone",
+                  "value": "auto"
+                }
+              ]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "date",
+              "value": "Sun, 13 Sep 2026 19:50:11 GMT"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "content-length",
+              "value": "89"
+            },
+            {
+              "key": "connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "content-encoding",
+              "value": "deflate"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n  \"error\": true,\n  \"reason\": \"Invalid value: Cannot initialize Float from invalid String value aschd\"\n}"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "geocodingBaseUrl",
+      "value": ""
+    },
+    {
+      "key": "forecastBaseUrl",
+      "value": ""
+    },
+    {
+      "key": "city",
+      "value": ""
+    },
+    {
+      "key": "lat",
+      "value": ""
+    },
+    {
+      "key": "lon",
+      "value": ""
+    },
+    {
+      "key": "days",
+      "value": ""
+    }
+  ]
+}
