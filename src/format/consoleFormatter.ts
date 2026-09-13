@@ -1,3 +1,4 @@
+import { getUnitLabels } from '../config/units.js';
 import { CityNotFoundError } from '../errors/appError.js';
 import type { CityWeather } from '../types/weather.js';
 
@@ -17,12 +18,13 @@ export function formatCityError(city: string, error: Error): string {
 }
 
 function formatForecastTable(weather: CityWeather): string {
-  const headers = ['Дата', 'Мин. °C', 'Макс. °C', 'Осадки'];
+  const labels = getUnitLabels(weather.units);
+  const headers = ['Дата', `Мин. ${labels.temperature}`, `Макс. ${labels.temperature}`, 'Осадки'];
   const rows = weather.forecast.map((day) => [
     day.date,
     formatTemperature(day.minTemperature),
     formatTemperature(day.maxTemperature),
-    `${day.precipitation} мм`,
+    `${day.precipitation} ${labels.precipitation}`,
   ]);
 
   const widths = headers.map((header, index) =>

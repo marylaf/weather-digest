@@ -7,4 +7,4 @@ export const DEFAULT_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 export const DEFAULT_TIMEOUT_MS = 5_000;
 
 export const REPORTS_DIR = './reports';
-export const UNITS = 'metric' as const;
+export const DEFAULT_UNITS = 'metric' as const;

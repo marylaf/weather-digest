@@ -1,3 +1,4 @@
+import type { Units } from './config.js';
 import type { DailyForecast } from './forecast.js';
 
 export interface CityWeather {
@@ -7,6 +8,7 @@ export interface CityWeather {
     latitude: number;
     longitude: number;
   };
+  units: Units;
   forecast: DailyForecast[];
 }
 

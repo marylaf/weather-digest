@@ -51,6 +51,10 @@ export function parseCityWeather(value: unknown): CityWeather | null {
     return null;
   }
 
+  if (value.units !== undefined && value.units !== 'metric' && value.units !== 'imperial') {
+    return null;
+  }
+
   if (!Array.isArray(value.forecast)) {
     return null;
   }
@@ -69,6 +73,7 @@ export function parseCityWeather(value: unknown): CityWeather | null {
     city: value.city,
     country: value.country,
     coordinates: { latitude, longitude },
+    units: value.units === 'imperial' ? 'imperial' : 'metric',
     forecast,
   };
 }
