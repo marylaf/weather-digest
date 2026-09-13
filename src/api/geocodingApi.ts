@@ -23,7 +23,11 @@ function parseGeocodingResponse(payload: unknown, city: string): GeoLocation {
 
   const { results } = payload;
 
-  if (results === undefined || results === null || (Array.isArray(results) && results.length === 0)) {
+  if (
+    results === undefined ||
+    results === null ||
+    (Array.isArray(results) && results.length === 0)
+  ) {
     throw new CityNotFoundError(`Город "${city}" не найден`);
   }
 

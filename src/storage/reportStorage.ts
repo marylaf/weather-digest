@@ -5,6 +5,7 @@ import type { DailyForecast } from '../types/forecast.js';
 import type { CityWeather } from '../types/weather.js';
 import { isRecord } from '../utils/isRecord.js';
 
+// eslint-disable-next-line no-control-regex -- strip C0 control characters from filenames
 const UNSAFE_FILENAME_CHARS = /[<>:"/\\|?*\u0000-\u001f]/g;
 
 export function getReportsDirectory(): string {
