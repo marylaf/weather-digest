@@ -1,3 +1,5 @@
+export type Units = 'metric' | 'imperial';
+
 export interface DailyForecast {
   date: string;
   minTemperature: number;
@@ -12,6 +14,7 @@ export interface CityWeather {
     latitude: number;
     longitude: number;
   };
+  units: Units;
   forecast: DailyForecast[];
 }
 

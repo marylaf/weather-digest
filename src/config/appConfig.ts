@@ -5,6 +5,7 @@ import {
   DEFAULT_TIMEOUT_MS,
   REPORTS_DIR,
 } from './constants.js';
+import { parseUnits } from './units.js';
 
 export function loadConfig(): AppConfig {
   return {
@@ -12,5 +13,6 @@ export function loadConfig(): AppConfig {
     forecastUrl: process.env.FORECAST_URL ?? DEFAULT_FORECAST_URL,
     timeoutMs: Number(process.env.TIMEOUT_MS) || DEFAULT_TIMEOUT_MS,
     reportsDir: process.env.REPORTS_DIR || REPORTS_DIR,
+    units: parseUnits(process.env.UNITS),
   };
 }

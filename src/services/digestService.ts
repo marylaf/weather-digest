@@ -1,6 +1,7 @@
-import { getWeatherForCity } from './weatherService.js';
+import { loadConfig } from '../config/appConfig.js';
 import { readReport, writeReport } from '../storage/reportStorage.js';
 import type { CityWeather, CityWeatherResult } from '../types/weather.js';
+import { getWeatherForCity } from './weatherService.js';
 
 export async function getWeatherDigest(
   city: string,
@@ -9,7 +10,7 @@ export async function getWeatherDigest(
 ): Promise<CityWeather> {
   if (!noCache) {
     const cached = await readReport(city);
-    if (cached !== null && cached.forecast.length >= days) {
+    if (cached !== null && cached.forecast.length >= days && cached.units === loadConfig().units) {
       return {
         ...cached,
         forecast: cached.forecast.slice(0, days),

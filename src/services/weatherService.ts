@@ -1,5 +1,6 @@
 import { getCoordinates } from '../api/geocodingApi.js';
 import { getForecast } from '../api/weatherApi.js';
+import { loadConfig } from '../config/appConfig.js';
 import type { CityWeather, CityWeatherResult } from '../types/weather.js';
 
 export async function getWeatherForCity(city: string, days: number): Promise<CityWeather> {
@@ -13,6 +14,7 @@ export async function getWeatherForCity(city: string, days: number): Promise<Cit
       latitude: location.latitude,
       longitude: location.longitude,
     },
+    units: loadConfig().units,
     forecast,
   };
 }

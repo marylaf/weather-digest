@@ -9,13 +9,15 @@ export async function getForecast(
   longitude: number,
   days: number,
 ): Promise<DailyForecast[]> {
-  const { forecastUrl } = loadConfig();
+  const { forecastUrl, units } = loadConfig();
   const url = new URL(forecastUrl);
   url.searchParams.set('latitude', String(latitude));
   url.searchParams.set('longitude', String(longitude));
   url.searchParams.set('daily', 'temperature_2m_max,temperature_2m_min,precipitation_sum');
   url.searchParams.set('forecast_days', String(days));
   url.searchParams.set('timezone', 'auto');
+  url.searchParams.set('temperature_unit', units === 'imperial' ? 'fahrenheit' : 'celsius');
+  url.searchParams.set('precipitation_unit', units === 'imperial' ? 'inch' : 'mm');
 
   const payload = await httpGetJson(url.toString());
   return parseForecastResponse(payload);

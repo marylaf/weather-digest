@@ -1,4 +1,4 @@
-import type { CityWeather } from '../types';
+import type { CityWeather, Units } from '../types';
 
 export interface ReportStyles {
   card: string;
@@ -8,6 +8,14 @@ export interface ReportStyles {
   table: string;
   empty: string;
   error: string;
+}
+
+function getUnitLabels(units: Units): { temperature: string; precipitation: string } {
+  if (units === 'imperial') {
+    return { temperature: '°F', precipitation: 'in' };
+  }
+
+  return { temperature: '°C', precipitation: 'мм' };
 }
 
 function formatCoordinate(value: number): string {
@@ -75,7 +83,8 @@ export function renderReport(
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  for (const header of ['Дата', 'Мин. °C', 'Макс. °C', 'Осадки']) {
+  const labels = getUnitLabels(report.units);
+  for (const header of ['Дата', `Мин. ${labels.temperature}`, `Макс. ${labels.temperature}`, 'Осадки']) {
     headRow.append(createCell('th', header));
   }
   thead.append(headRow);
@@ -87,7 +96,7 @@ export function renderReport(
       createCell('td', formatDate(day.date)),
       createCell('td', formatTemperature(day.minTemperature)),
       createCell('td', formatTemperature(day.maxTemperature)),
-      createCell('td', `${day.precipitation} мм`),
+      createCell('td', `${day.precipitation} ${labels.precipitation}`),
     );
     tbody.append(row);
   }

@@ -1,6 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { loadConfig } from '../config/appConfig.js';
+import { DEFAULT_UNITS } from '../config/constants.js';
+import { isUnits } from '../config/units.js';
 import type { DailyForecast } from '../types/forecast.js';
 import type { CityWeather } from '../types/weather.js';
 import { isRecord } from '../utils/isRecord.js';
@@ -68,6 +70,10 @@ function parseCityWeather(value: unknown): CityWeather | null {
     return null;
   }
 
+  if (value.units !== undefined && !isUnits(value.units)) {
+    return null;
+  }
+
   if (!Array.isArray(value.forecast)) {
     return null;
   }
@@ -86,6 +92,7 @@ function parseCityWeather(value: unknown): CityWeather | null {
     city: value.city,
     country: value.country,
     coordinates: { latitude, longitude },
+    units: isUnits(value.units) ? value.units : DEFAULT_UNITS,
     forecast,
   };
 }
