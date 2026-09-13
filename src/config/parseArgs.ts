@@ -1,15 +1,13 @@
 import { parseArgs } from 'node:util';
 import type { CliOptions } from '../types/cli.js';
+import { DEFAULT_DAYS, MAX_DAYS, MIN_DAYS } from './constants.js';
 
 const OPTIONS = {
   city: { type: 'string' },
   days: { type: 'string' },
+  'no-cache': { type: 'boolean', default: false },
 } as const;
 
-/**
- * Parses CLI arguments for the weather digest.
- * @param argv - Argument list, defaults to process.argv without the node/script prefix
- */
 export function parseCliArgs(argv: string[] = process.argv.slice(2)): CliOptions {
   const { values } = parseArgs({
     args: argv,
@@ -17,19 +15,48 @@ export function parseCliArgs(argv: string[] = process.argv.slice(2)): CliOptions
     strict: true,
   });
 
-  const city = values.city?.trim();
-  if (!city) {
+  const cities = parseCities(values.city);
+  const days = parseDays(values.days);
+
+  return {
+    cities,
+    days,
+    noCache: values['no-cache'] ?? false,
+  };
+}
+
+function parseCities(rawCity: string | undefined): string[] {
+  const cities = rawCity
+    ?.split(',')
+    .map((city) => city.trim())
+    .filter((city) => city.length > 0);
+
+  if (!cities?.length) {
     throw new Error('Missing required argument: --city');
   }
 
-  if (values.days === undefined) {
-    throw new Error('Missing required argument: --days');
+  return cities;
+}
+
+function parseDays(rawDays: string | undefined): number {
+  if (rawDays === undefined) {
+    return DEFAULT_DAYS;
   }
 
-  const days = Number.parseInt(values.days, 10);
-  if (!Number.isInteger(days) || days < 1 || String(days) !== values.days.trim()) {
-    throw new Error('Invalid argument: --days must be a positive integer');
+  const trimmed = rawDays.trim();
+  const days = Number(trimmed);
+
+  if (
+    trimmed === '' ||
+    !Number.isInteger(days) ||
+    days < MIN_DAYS ||
+    days > MAX_DAYS ||
+    String(days) !== trimmed
+  ) {
+    throw new Error(
+      `Invalid argument: --days must be an integer between ${MIN_DAYS} and ${MAX_DAYS}`,
+    );
   }
 
-  return { city, days };
+  return days;
 }

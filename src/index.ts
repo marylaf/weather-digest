@@ -5,6 +5,6 @@ try {
   console.log(options);
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
-  console.error('Usage: npm start -- --city "Нижний Новгород" --days 3');
+  console.error('Usage: npm start -- --city "Москва,Казань,Сочи" [--days 3] [--no-cache]');
   process.exitCode = 1;
 }

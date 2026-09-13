@@ -1,4 +1,5 @@
 export interface CliOptions {
-  city: string;
+  cities: string[];
   days: number;
+  noCache: boolean;
 }
