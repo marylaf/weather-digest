@@ -1,14 +1,10 @@
 import { parseArgs } from 'node:util';
+import type { CliOptions } from '../types/cli.js';
 
 const OPTIONS = {
   city: { type: 'string' },
   days: { type: 'string' },
 } as const;
-
-export type CliOptions = {
-  city: string;
-  days: number;
-};
 
 /**
  * Parses CLI arguments for the weather digest.
