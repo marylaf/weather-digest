@@ -1,0 +1,14 @@
+services:
+  weather-digest:
+    build: .
+    image: weather-digest:local
+    environment:
+      CITY: ${CITY}
+      DAYS: ${DAYS:-3}
+      NO_CACHE: ${NO_CACHE:-false}
+      GEOCODING_URL: ${GEOCODING_URL:-https://geocoding-api.open-meteo.com/v1/search}
+      FORECAST_URL: ${FORECAST_URL:-https://api.open-meteo.com/v1/forecast}
+      TIMEOUT_MS: ${TIMEOUT_MS:-10000}
+      REPORTS_DIR: /app/reports
+    volumes:
+      - ./reports:/app/reports
