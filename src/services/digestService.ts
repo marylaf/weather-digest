@@ -46,8 +46,7 @@ export async function getWeatherDigests(
       return { city, status: 'fulfilled', data: result.value };
     }
 
-    const error =
-      result.reason instanceof Error ? result.reason : new Error(String(result.reason));
+    const error = result.reason instanceof Error ? result.reason : new Error(String(result.reason));
 
     return { city, status: 'rejected', error };
   });

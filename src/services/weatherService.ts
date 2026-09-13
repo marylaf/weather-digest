@@ -21,9 +21,7 @@ export async function getWeatherForCities(
   cities: string[],
   days: number,
 ): Promise<CityWeatherResult[]> {
-  const settled = await Promise.allSettled(
-    cities.map((city) => getWeatherForCity(city, days)),
-  );
+  const settled = await Promise.allSettled(cities.map((city) => getWeatherForCity(city, days)));
 
   return cities.map((city, index) => {
     const result = settled[index];
@@ -40,8 +38,7 @@ export async function getWeatherForCities(
       return { city, status: 'fulfilled', data: result.value };
     }
 
-    const error =
-      result.reason instanceof Error ? result.reason : new Error(String(result.reason));
+    const error = result.reason instanceof Error ? result.reason : new Error(String(result.reason));
 
     return { city, status: 'rejected', error };
   });
