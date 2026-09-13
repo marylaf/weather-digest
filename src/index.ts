@@ -1,25 +1,23 @@
 import { parseCliArgs } from './config/parseArgs.js';
-import { getWeatherForCities } from './services/weatherService.js';
+import { formatCityError, formatWeather } from './format/consoleFormatter.js';
+import { getWeatherDigests } from './services/digestService.js';
 
 try {
   const options = parseCliArgs();
-  const results = await getWeatherForCities(options.cities, options.days);
+  const results = await getWeatherDigests(options.cities, options.days, options.noCache);
 
   for (const result of results) {
     if (result.status === 'fulfilled') {
-      console.log(result.data);
+      console.log(formatWeather(result.data));
+      console.log();
       continue;
     }
 
-    console.error(`${result.city}: ${result.error.message}`);
-    if (result.error.cause !== undefined) {
-      console.error(result.error.cause);
-    }
+    console.log(formatCityError(result.city, result.error));
+    console.log();
   }
 
-  if (results.some((result) => result.status === 'rejected')) {
-    process.exitCode = 1;
-  }
+  process.exitCode = results.some((result) => result.status === 'rejected') ? 1 : 0;
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   console.error('Usage: npm start -- --city "Москва,Казань,Сочи" [--days 3] [--no-cache]');
