@@ -1,18 +1,25 @@
-import {
-  DEFAULT_FORECAST_URL,
-  DEFAULT_GEOCODING_URL,
-  DEFAULT_TIMEOUT_MS,
-} from './config/constants.js';
 import { parseCliArgs } from './config/parseArgs.js';
+import { getWeatherForCities } from './services/weatherService.js';
 
 try {
   const options = parseCliArgs();
-  const config = {
-    geocodingUrl: process.env.GEOCODING_URL ?? DEFAULT_GEOCODING_URL,
-    forecastUrl: process.env.FORECAST_URL ?? DEFAULT_FORECAST_URL,
-    timeoutMs: Number(process.env.TIMEOUT_MS) || DEFAULT_TIMEOUT_MS,
-  };
-  console.log({ config, options });
+  const results = await getWeatherForCities(options.cities, options.days);
+
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      console.log(result.data);
+      continue;
+    }
+
+    console.error(`${result.city}: ${result.error.message}`);
+    if (result.error.cause !== undefined) {
+      console.error(result.error.cause);
+    }
+  }
+
+  if (results.some((result) => result.status === 'rejected')) {
+    process.exitCode = 1;
+  }
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   console.error('Usage: npm start -- --city "Москва,Казань,Сочи" [--days 3] [--no-cache]');
