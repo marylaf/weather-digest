@@ -6,14 +6,20 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: ['dist/**', 'reports/**', 'node_modules/**'],
+    ignores: ['dist/**', 'web/dist/**', 'reports/**', 'node_modules/**'],
   },
   js.configs.recommended,
   tseslint.configs.recommended,
   {
-    files: ['**/*.ts'],
+    files: ['src/**/*.ts', 'web/vite.config.ts'],
     languageOptions: {
       globals: globals.node,
+    },
+  },
+  {
+    files: ['web/src/**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: globals.browser,
     },
   },
   eslintConfigPrettier,
