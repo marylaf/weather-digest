@@ -23,6 +23,11 @@ export async function updateRequest(req: Request, res: Response): Promise<void> 
   res.status(200).json({ data });
 }
 
+export async function updateRequestStatus(req: Request, res: Response): Promise<void> {
+  const data = await requestService.updateRequestStatus(requireId(req, 'request'), req.body);
+  res.status(200).json({ data });
+}
+
 export async function deleteRequest(req: Request, res: Response): Promise<void> {
   await requestService.deleteRequest(requireId(req, 'request'));
   res.status(204).end();

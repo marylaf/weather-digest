@@ -5,12 +5,14 @@ import {
   getRequestById,
   listRequests,
   updateRequest,
+  updateRequestStatus,
 } from '../controllers/request.controller.js';
 
 const requestRouter = Router();
 
 requestRouter.get('/', listRequests);
 requestRouter.post('/', createRequest);
+requestRouter.patch('/:id/status', updateRequestStatus);
 requestRouter.get('/:id', getRequestById);
 requestRouter.patch('/:id', updateRequest);
 requestRouter.delete('/:id', deleteRequest);

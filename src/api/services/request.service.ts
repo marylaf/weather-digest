@@ -8,9 +8,16 @@ import type {
   RequestListResult,
   RequestPriority,
   RequestSortField,
+  RequestStatus,
   UpdateRequestInput,
 } from '../../types/request.js';
-import { REQUEST_PRIORITIES, isRequestPriority, isRequestSortField } from '../../types/request.js';
+import {
+  REQUEST_PRIORITIES,
+  REQUEST_STATUSES,
+  isRequestPriority,
+  isRequestSortField,
+  isRequestStatus,
+} from '../../types/request.js';
 import { isRecord } from '../../utils/isRecord.js';
 import { HttpError } from '../errors/httpError.js';
 import * as equipmentRepository from '../repositories/equipment.repository.js';
@@ -24,6 +31,13 @@ const DEFAULT_ORDER: SortOrder = 'asc';
 const TITLE_MIN_LENGTH = 5;
 const TITLE_MAX_LENGTH = 120;
 const DESCRIPTION_MAX_LENGTH = 2000;
+
+const STATUS_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
+  new: ['in_progress', 'rejected'],
+  in_progress: ['done', 'rejected'],
+  done: [],
+  rejected: [],
+};
 
 export async function createRequest(input: unknown): Promise<MaintenanceRequest> {
   const payload = parseCreateInput(input);
@@ -101,6 +115,28 @@ export async function updateRequest(id: string, input: unknown): Promise<Mainten
   return saved;
 }
 
+export async function updateRequestStatus(id: string, input: unknown): Promise<MaintenanceRequest> {
+  const current = await getRequestById(id);
+  const status = parseStatusInput(input);
+  assertStatusTransition(current.status, status);
+
+  const updated: MaintenanceRequest = {
+    ...current,
+    status,
+    id: current.id,
+    createdAt: current.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const saved = await requestRepository.update(updated);
+
+  if (saved === null) {
+    throw new HttpError(404, 'Maintenance request not found');
+  }
+
+  return saved;
+}
+
 export async function deleteRequest(id: string): Promise<void> {
   const deleted = await requestRepository.remove(id);
 
@@ -114,6 +150,12 @@ async function assertEquipmentExists(equipmentId: string): Promise<void> {
 
   if (equipment === null) {
     throw new HttpError(404, 'Equipment not found');
+  }
+}
+
+function assertStatusTransition(from: RequestStatus, to: RequestStatus): void {
+  if (!STATUS_TRANSITIONS[from].includes(to)) {
+    throw new HttpError(409, `Cannot transition status from ${from} to ${to}`);
   }
 }
 
@@ -210,6 +252,14 @@ function parseUpdateInput(input: unknown): UpdateRequestInput {
   return changes;
 }
 
+function parseStatusInput(input: unknown): RequestStatus {
+  if (!isRecord(input)) {
+    throw new HttpError(400, 'Invalid status payload');
+  }
+
+  return parseStatus(input.status);
+}
+
 function parseEquipmentId(value: unknown): string {
   if (typeof value !== 'string') {
     throw new HttpError(400, 'equipmentId is required');
@@ -267,6 +317,14 @@ function parseDescription(value: unknown): string {
 function parsePriority(value: unknown): RequestPriority {
   if (!isRequestPriority(value)) {
     throw new HttpError(400, `priority must be one of: ${REQUEST_PRIORITIES.join(', ')}`);
+  }
+
+  return value;
+}
+
+function parseStatus(value: unknown): RequestStatus {
+  if (!isRequestStatus(value)) {
+    throw new HttpError(400, `status must be one of: ${REQUEST_STATUSES.join(', ')}`);
   }
 
   return value;
