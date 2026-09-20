@@ -1,3 +1,5 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import helmet from 'helmet';
 import { loadConfig } from '../config/appConfig.js';
@@ -13,6 +15,7 @@ import { healthRouter } from './routes/health.routes.js';
 import { requestRouter } from './routes/request.routes.js';
 
 const { jsonBodyLimit } = loadConfig();
+const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public');
 const app = express();
 
 app.use(requestId);
@@ -29,6 +32,7 @@ app.use('/api', requireApiKey);
 app.use('/api', healthRouter);
 app.use('/api/equipment', equipmentRouter);
 app.use('/api/requests', requestRouter);
+app.use(express.static(publicDir));
 app.use(notFound);
 app.use(errorHandler);
 

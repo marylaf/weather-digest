@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Заявки на обслуживание</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        font-family: Manrope, 'Segoe UI', sans-serif;
+        color: #fde8f6;
+        background: #1a0b2e;
+      }
+
+      .page {
+        position: relative;
+        min-height: 100vh;
+        overflow-x: hidden;
+        padding: 32px 20px 48px;
+        background:
+          radial-gradient(circle at 12% 18%, rgba(244, 114, 182, 0.42), transparent 36%),
+          radial-gradient(circle at 88% 8%, rgba(168, 85, 247, 0.4), transparent 32%),
+          radial-gradient(circle at 70% 88%, rgba(236, 72, 153, 0.28), transparent 40%),
+          linear-gradient(160deg, #1a0b2e 0%, #4a1c6b 48%, #9d3b7a 100%);
+      }
+
+      .inner {
+        position: relative;
+        z-index: 1;
+        max-width: 960px;
+        margin: 0 auto;
+        display: grid;
+        gap: 20px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 4vw, 2.4rem);
+        color: #fff1f8;
+      }
+
+      .card {
+        padding: 24px;
+        border: 1px solid rgba(255, 228, 246, 0.22);
+        border-radius: 24px;
+        background: rgba(42, 16, 56, 0.46);
+        box-shadow: 0 18px 50px rgba(42, 8, 56, 0.28);
+        backdrop-filter: blur(16px);
+      }
+
+      h2 {
+        margin: 0 0 16px;
+        font-size: 1.15rem;
+        color: #ffe4f3;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px 16px;
+      }
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #f9a8d4;
+      }
+
+      input,
+      select,
+      textarea,
+      button {
+        font: inherit;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid rgba(255, 228, 246, 0.28);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgba(255, 240, 248, 0.1);
+        color: #fdf2f8;
+        text-transform: none;
+        letter-spacing: normal;
+        font-weight: 400;
+      }
+
+      textarea {
+        min-height: 88px;
+        resize: vertical;
+      }
+
+      option {
+        color: #2a1038;
+      }
+
+      .filters {
+        margin-bottom: 20px;
+      }
+
+      .description {
+        margin-top: 12px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .pagination .actions {
+        margin-top: 0;
+      }
+
+      button {
+        border: 1px solid rgba(255, 228, 246, 0.28);
+        border-radius: 999px;
+        padding: 8px 16px;
+        background: rgba(255, 240, 248, 0.1);
+        color: #fce7f3;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:hover,
+      button:focus-visible {
+        background: rgba(244, 114, 182, 0.28);
+        border-color: #f9a8d4;
+        outline: none;
+      }
+
+      button.primary {
+        background: linear-gradient(135deg, #f472b6, #c084fc);
+        border-color: transparent;
+        color: #2a1038;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 640px;
+      }
+
+      th,
+      td {
+        padding: 12px 10px;
+        text-align: left;
+        border-bottom: 1px solid rgba(251, 207, 232, 0.16);
+      }
+
+      th {
+        font-size: 0.82rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #f9a8d4;
+      }
+
+      td {
+        color: #fdf2f8;
+        vertical-align: top;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        background: rgba(255, 240, 248, 0.14);
+      }
+
+      .status-new {
+        color: #fce7f3;
+      }
+
+      .status-in_progress {
+        color: #ddd6fe;
+      }
+
+      .status-done {
+        color: #bbf7d0;
+      }
+
+      .status-rejected {
+        color: #fecdd3;
+      }
+
+      .priority-critical,
+      .priority-high {
+        color: #fecdd3;
+      }
+
+      .empty,
+      .message {
+        margin: 0;
+      }
+
+      .message {
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: 12px;
+      }
+
+      .message.error {
+        color: #fecdd3;
+        background: rgba(127, 29, 29, 0.28);
+      }
+
+      .message.ok {
+        color: #bbf7d0;
+        background: rgba(20, 83, 45, 0.28);
+      }
+
+      .pagination {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 16px;
+        color: #e9d5ff;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <main class="inner">
+        <header>
+          <h1>Заявки на обслуживание</h1>
+        </header>
+
+        <section class="card" aria-labelledby="list-title">
+          <h2 id="list-title">Список заявок</h2>
+          <form id="filters-form" class="filters">
+            <div class="grid">
+              <label>
+                Статус
+                <select name="status" id="filter-status">
+                  <option value="">Все</option>
+                  <option value="new">Новая</option>
+                  <option value="in_progress">В работе</option>
+                  <option value="done">Выполнена</option>
+                  <option value="rejected">Отклонена</option>
+                </select>
+              </label>
+              <label>
+                Приоритет
+                <select name="priority" id="filter-priority">
+                  <option value="">Все</option>
+                  <option value="low">Низкий</option>
+                  <option value="medium">Средний</option>
+                  <option value="high">Высокий</option>
+                  <option value="critical">Критический</option>
+                </select>
+              </label>
+              <label>
+                Оборудование
+                <select name="equipmentId" id="filter-equipment">
+                  <option value="">Все</option>
+                </select>
+              </label>
+              <label>
+                Создана с
+                <input type="date" name="createdFrom" id="filter-created-from" />
+              </label>
+              <label>
+                Создана по
+                <input type="date" name="createdTo" id="filter-created-to" />
+              </label>
+            </div>
+            <div class="actions">
+              <button class="primary" type="submit">Применить</button>
+              <button type="reset" id="filters-reset">Сбросить</button>
+            </div>
+          </form>
+          <p id="list-message" class="message" hidden></p>
+          <div class="table-wrap">
+            <table>
+              <caption class="sr-only">
+                Заявки на обслуживание
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Название</th>
+                  <th scope="col">Оборудование</th>
+                  <th scope="col">Статус</th>
+                  <th scope="col">Приоритет</th>
+                  <th scope="col">Создана</th>
+                </tr>
+              </thead>
+              <tbody id="requests-body">
+                <tr>
+                  <td colspan="5">Загрузка…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <p id="list-meta" class="empty">—</p>
+            <div class="actions">
+              <button type="button" id="prev-page">Назад</button>
+              <button type="button" id="next-page">Вперёд</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="create-title">
+          <h2 id="create-title">Новая заявка</h2>
+          <form id="create-form">
+            <div class="grid">
+              <label>
+                Оборудование
+                <select name="equipmentId" id="create-equipment" required>
+                  <option value="">Выберите оборудование</option>
+                </select>
+              </label>
+              <label>
+                Приоритет
+                <select name="priority" id="create-priority" required>
+                  <option value="low">Низкий</option>
+                  <option value="medium" selected>Средний</option>
+                  <option value="high">Высокий</option>
+                  <option value="critical">Критический</option>
+                </select>
+              </label>
+              <label>
+                Название
+                <input
+                  name="title"
+                  id="create-title-input"
+                  type="text"
+                  minlength="5"
+                  maxlength="120"
+                  required
+                  placeholder="Не короче 5 символов"
+                />
+              </label>
+              <label>
+                Плановая дата
+                <input name="plannedAt" id="create-planned-at" type="datetime-local" />
+              </label>
+              <label>
+                API-ключ
+                <input
+                  id="api-key"
+                  name="apiKey"
+                  type="password"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+              </label>
+            </div>
+            <label class="description">
+              Описание
+              <textarea name="description" id="create-description" maxlength="2000"></textarea>
+            </label>
+            <div class="actions">
+              <button class="primary" type="submit" id="create-submit">Создать заявку</button>
+            </div>
+            <p id="create-message" class="message" hidden></p>
+          </form>
+        </section>
+      </main>
+    </div>
+    <script src="/requests.js" defer></script>
+  </body>
+</html>
