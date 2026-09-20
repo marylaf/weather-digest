@@ -28,6 +28,12 @@ export class HttpAppError extends AppError {
   }
 }
 
+export class UnauthorizedError extends HttpAppError {
+  constructor(message = 'Missing or invalid API key') {
+    super(401, 'UNAUTHORIZED', message);
+  }
+}
+
 export class NotFoundError extends HttpAppError {
   constructor(message = 'Resource not found') {
     super(404, 'NOT_FOUND', message);

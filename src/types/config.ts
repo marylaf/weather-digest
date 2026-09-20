@@ -15,4 +15,5 @@ export interface AppConfig {
   rateLimitWindowMs: number;
   rateLimitMax: number;
   jsonBodyLimit: string;
+  apiKey: string;
 }

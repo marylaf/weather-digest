@@ -1,6 +1,12 @@
 import { jest } from '@jest/globals';
 import { equipmentPayload, forecastApiResponse } from '../helpers/fixtures.js';
-import { api, createEquipment, createRequest, expectApiError } from '../helpers/http.js';
+import {
+  api,
+  createEquipment,
+  createRequest,
+  expectApiError,
+  withApiKey,
+} from '../helpers/http.js';
 import { resetStore } from '../helpers/store.js';
 
 describe('/api/equipment', () => {
@@ -11,7 +17,7 @@ describe('/api/equipment', () => {
 
   it('создаёт оборудование и возвращает его по id', async () => {
     const payload = equipmentPayload({ name: 'Moscow turbine' });
-    const created = await api().post('/api/equipment').send(payload).expect(201);
+    const created = await withApiKey(api().post('/api/equipment')).send(payload).expect(201);
 
     expect(created.headers.location).toBe(`/api/equipment/${created.body.data.id}`);
     expect(created.body.data).toMatchObject({
@@ -39,8 +45,7 @@ describe('/api/equipment', () => {
 
   it('обновляет оборудование', async () => {
     const equipment = await createEquipment();
-    const response = await api()
-      .patch(`/api/equipment/${equipment.id}`)
+    const response = await withApiKey(api().patch(`/api/equipment/${equipment.id}`))
       .send({ status: 'maintenance', name: 'Updated turbine' })
       .expect(200);
 
@@ -55,7 +60,7 @@ describe('/api/equipment', () => {
   it('удаляет оборудование без открытых заявок', async () => {
     const equipment = await createEquipment();
 
-    await api().delete(`/api/equipment/${equipment.id}`).expect(204);
+    await withApiKey(api().delete(`/api/equipment/${equipment.id}`)).expect(204);
     const missing = await api().get(`/api/equipment/${equipment.id}`);
     expectApiError(missing, 404, 'NOT_FOUND');
   });
@@ -64,14 +69,15 @@ describe('/api/equipment', () => {
     const equipment = await createEquipment();
     await createRequest(equipment.id);
 
-    const response = await api().delete(`/api/equipment/${equipment.id}`);
+    const response = await withApiKey(api().delete(`/api/equipment/${equipment.id}`));
     expectApiError(response, 409, 'CONFLICT');
   });
 
   it('отклоняет создание с невалидным телом', async () => {
-    const response = await api()
-      .post('/api/equipment')
-      .send({ ...equipmentPayload(), name: 'ab' });
+    const response = await withApiKey(api().post('/api/equipment')).send({
+      ...equipmentPayload(),
+      name: 'ab',
+    });
 
     expectApiError(response, 400, 'VALIDATION_ERROR');
     expect(response.body.error.details).toEqual(
@@ -86,11 +92,11 @@ describe('/api/equipment', () => {
 
   it('не создаёт оборудование с занятым serialNumber', async () => {
     const payload = equipmentPayload({ serialNumber: 'WT-DUP-001' });
-    await api().post('/api/equipment').send(payload).expect(201);
+    await withApiKey(api().post('/api/equipment')).send(payload).expect(201);
 
-    const response = await api()
-      .post('/api/equipment')
-      .send(equipmentPayload({ serialNumber: 'WT-DUP-001' }));
+    const response = await withApiKey(api().post('/api/equipment')).send(
+      equipmentPayload({ serialNumber: 'WT-DUP-001' }),
+    );
     expectApiError(response, 409, 'CONFLICT');
   });
 

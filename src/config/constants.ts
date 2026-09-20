@@ -20,6 +20,9 @@ export const DEFAULT_RATE_LIMIT_WINDOW_MS = 60_000;
 export const DEFAULT_RATE_LIMIT_MAX = 100;
 export const DEFAULT_JSON_BODY_LIMIT = '100kb';
 
+export const API_KEY_HEADER = 'X-API-Key';
+export const MUTATING_METHODS = ['POST', 'PATCH', 'DELETE'] as const;
+
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 10;
 export const MAX_LIMIT = 100;
