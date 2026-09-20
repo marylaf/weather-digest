@@ -26,3 +26,9 @@ export interface CityWeatherFailure {
 }
 
 export type CityWeatherResult = CityWeatherSuccess | CityWeatherFailure;
+
+export interface EquipmentWeather {
+  equipmentId: string;
+  weather: WeatherForecast;
+  outdoorWorkSuitable: boolean;
+}

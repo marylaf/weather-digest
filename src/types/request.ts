@@ -1,3 +1,5 @@
+import type { SortOrder } from './equipment.js';
+
 export const REQUEST_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
 export type RequestPriority = (typeof REQUEST_PRIORITIES)[number];
 
@@ -45,15 +47,15 @@ export interface UpdateRequestInput {
 }
 
 export interface RequestListQuery {
-  status?: string;
-  priority?: string;
+  status?: RequestStatus;
+  priority?: RequestPriority;
   equipmentId?: string;
   createdFrom?: string;
   createdTo?: string;
-  sortBy?: string;
-  order?: string;
-  page?: string;
-  limit?: string;
+  sortBy?: RequestSortField;
+  order?: SortOrder;
+  page?: number;
+  limit?: number;
 }
 
 export interface RequestListMeta {
