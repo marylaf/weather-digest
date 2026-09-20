@@ -22,6 +22,7 @@ import {
 import { isRecord } from '../../utils/isRecord.js';
 import { HttpError } from '../errors/httpError.js';
 import * as equipmentRepository from '../repositories/equipment.repository.js';
+import * as requestService from './request.service.js';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
@@ -96,7 +97,12 @@ export async function updateEquipment(id: string, input: unknown): Promise<Equip
 }
 
 export async function deleteEquipment(id: string): Promise<void> {
-  // TODO(feat/requests-crud): forbid delete when equipment has open maintenance requests
+  await getEquipmentById(id);
+
+  if (await requestService.hasOpenRequests(id)) {
+    throw new HttpError(409, 'Equipment has open maintenance requests');
+  }
+
   const deleted = await equipmentRepository.remove(id);
 
   if (!deleted) {

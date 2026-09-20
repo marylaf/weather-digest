@@ -5,6 +5,7 @@ import {
   DEFAULT_GEOCODING_URL,
   DEFAULT_NODE_ENV,
   DEFAULT_PORT,
+  DEFAULT_REQUESTS_FILE,
   DEFAULT_TIMEOUT_MS,
   REPORTS_DIR,
 } from './constants.js';
@@ -20,5 +21,6 @@ export function loadConfig(): AppConfig {
     port: Number(process.env.PORT) || DEFAULT_PORT,
     nodeEnv: process.env.NODE_ENV || DEFAULT_NODE_ENV,
     equipmentFile: process.env.EQUIPMENT_FILE || DEFAULT_EQUIPMENT_FILE,
+    requestsFile: process.env.REQUESTS_FILE || DEFAULT_REQUESTS_FILE,
   };
 }
