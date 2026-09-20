@@ -3,6 +3,7 @@ import {
   createRequest,
   deleteRequest,
   getRequestById,
+  importRequests,
   listRequests,
   updateRequest,
   updateRequestStatus,
@@ -11,6 +12,7 @@ import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { validate } from '../middlewares/validate.js';
 import {
   createRequestBodySchema,
+  importRequestsBodySchema,
   requestIdParamsSchema,
   requestListQuerySchema,
   updateRequestBodySchema,
@@ -21,6 +23,11 @@ const requestRouter = Router();
 
 requestRouter.get('/', validate({ query: requestListQuerySchema }), asyncHandler(listRequests));
 requestRouter.post('/', validate({ body: createRequestBodySchema }), asyncHandler(createRequest));
+requestRouter.post(
+  '/import',
+  validate({ body: importRequestsBodySchema }),
+  asyncHandler(importRequests),
+);
 requestRouter.patch(
   '/:id/status',
   validate({ params: requestIdParamsSchema, body: updateRequestStatusBodySchema }),

@@ -17,6 +17,11 @@ export async function createRequest(req: Request, res: Response): Promise<void> 
   res.status(201).location(`/api/requests/${data.id}`).json({ data });
 }
 
+export async function importRequests(req: Request, res: Response): Promise<void> {
+  const result = await requestService.importRequests((req.body as { items: unknown[] }).items);
+  res.status(result.meta.failed === 0 ? 201 : 207).json(result);
+}
+
 export async function getRequestById(req: Request, res: Response): Promise<void> {
   const data = await requestService.getRequestById(req.params.id as string);
   res.status(200).json({ data });
