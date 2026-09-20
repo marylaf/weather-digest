@@ -1,5 +1,6 @@
 import type { AppConfig } from '../types/config.js';
 import {
+  DEFAULT_EQUIPMENT_FILE,
   DEFAULT_FORECAST_URL,
   DEFAULT_GEOCODING_URL,
   DEFAULT_NODE_ENV,
@@ -18,5 +19,6 @@ export function loadConfig(): AppConfig {
     units: parseUnits(process.env.UNITS),
     port: Number(process.env.PORT) || DEFAULT_PORT,
     nodeEnv: process.env.NODE_ENV || DEFAULT_NODE_ENV,
+    equipmentFile: process.env.EQUIPMENT_FILE || DEFAULT_EQUIPMENT_FILE,
   };
 }

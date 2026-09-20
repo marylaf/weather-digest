@@ -8,4 +8,5 @@ export interface AppConfig {
   units: Units;
   port: number;
   nodeEnv: string;
+  equipmentFile: string;
 }

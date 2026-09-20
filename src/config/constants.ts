@@ -11,3 +11,4 @@ export const DEFAULT_UNITS = 'metric' as const;
 
 export const DEFAULT_PORT = 3_000;
 export const DEFAULT_NODE_ENV = 'development';
+export const DEFAULT_EQUIPMENT_FILE = './data/equipment.json';
