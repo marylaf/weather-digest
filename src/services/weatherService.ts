@@ -1,6 +1,7 @@
 import { getCoordinates } from '../api/geocodingApi.js';
 import { getForecast } from '../api/weatherApi.js';
 import { loadConfig } from '../config/appConfig.js';
+import type { DailyForecast } from '../types/forecast.js';
 import type { CityWeather, CityWeatherResult, WeatherForecast } from '../types/weather.js';
 
 export async function getForecastByCoordinates(
@@ -56,4 +57,21 @@ export async function getWeatherForCities(
 
     return { city, status: 'rejected', error };
   });
+}
+
+/**
+ * Наружные работы пригодны, если в первый день прогноза нет осадков
+ * и максимальная скорость ветра ниже порога из конфигурации.
+ */
+export function isOutdoorWorkSuitable(
+  forecast: readonly DailyForecast[],
+  maxWindSpeed: number,
+): boolean {
+  const day = forecast[0];
+
+  if (day === undefined) {
+    return false;
+  }
+
+  return day.precipitation === 0 && day.windSpeed < maxWindSpeed;
 }

@@ -3,4 +3,5 @@ export interface DailyForecast {
   minTemperature: number;
   maxTemperature: number;
   precipitation: number;
+  windSpeed: number;
 }

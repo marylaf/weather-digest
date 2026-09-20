@@ -102,15 +102,17 @@ function parseDailyForecast(value: unknown): DailyForecast | null {
     return null;
   }
 
-  const { minTemperature, maxTemperature, precipitation } = value;
+  const { minTemperature, maxTemperature, precipitation, windSpeed } = value;
 
   if (
     typeof minTemperature !== 'number' ||
     typeof maxTemperature !== 'number' ||
     typeof precipitation !== 'number' ||
+    typeof windSpeed !== 'number' ||
     !Number.isFinite(minTemperature) ||
     !Number.isFinite(maxTemperature) ||
-    !Number.isFinite(precipitation)
+    !Number.isFinite(precipitation) ||
+    !Number.isFinite(windSpeed)
   ) {
     return null;
   }
@@ -120,5 +122,6 @@ function parseDailyForecast(value: unknown): DailyForecast | null {
     minTemperature,
     maxTemperature,
     precipitation,
+    windSpeed,
   };
 }

@@ -1,42 +1,42 @@
 import { randomUUID } from 'node:crypto';
+import { loadConfig } from '../../config/appConfig.js';
+import { DEFAULT_DAYS, DEFAULT_LIMIT, DEFAULT_PAGE } from '../../config/constants.js';
+import {
+  HttpStatusError,
+  InvalidApiResponseError,
+  InvalidJsonError,
+  NetworkError,
+  TimeoutError,
+} from '../../errors/appError.js';
+import { ConflictError, ExternalServiceError, NotFoundError } from '../../errors/httpErrors.js';
+import { getForecastByCoordinates, isOutdoorWorkSuitable } from '../../services/weatherService.js';
 import type {
   CreateEquipmentInput,
   Equipment,
   EquipmentListQuery,
   EquipmentListResult,
   EquipmentSortField,
-  EquipmentStatus,
-  EquipmentType,
-  GeoLocation,
   SortOrder,
   UpdateEquipmentInput,
 } from '../../types/equipment.js';
-import {
-  EQUIPMENT_STATUSES,
-  EQUIPMENT_TYPES,
-  isEquipmentSortField,
-  isEquipmentStatus,
-  isEquipmentType,
-  isSortOrder,
-} from '../../types/equipment.js';
-import { isRecord } from '../../utils/isRecord.js';
-import { HttpError } from '../errors/httpError.js';
+import type { EquipmentWeather } from '../../types/weather.js';
 import * as equipmentRepository from '../repositories/equipment.repository.js';
 import * as requestService from './request.service.js';
 
-const DEFAULT_PAGE = 1;
-const DEFAULT_LIMIT = 10;
-const MAX_LIMIT = 100;
 const DEFAULT_SORT_BY: EquipmentSortField = 'name';
 const DEFAULT_ORDER: SortOrder = 'asc';
 
-export async function createEquipment(input: unknown): Promise<Equipment> {
-  const payload = parseCreateInput(input);
+export async function createEquipment(payload: CreateEquipmentInput): Promise<Equipment> {
   await assertSerialNumberAvailable(payload.serialNumber);
 
   const equipment: Equipment = {
     id: randomUUID(),
-    ...payload,
+    name: payload.name,
+    type: payload.type,
+    serialNumber: payload.serialNumber,
+    location: payload.location,
+    status: payload.status,
+    installedAt: payload.installedAt,
   };
 
   return equipmentRepository.create(equipment);
@@ -46,10 +46,30 @@ export async function getEquipmentById(id: string): Promise<Equipment> {
   const equipment = await equipmentRepository.findById(id);
 
   if (equipment === null) {
-    throw new HttpError(404, 'Equipment not found');
+    throw new NotFoundError('Equipment not found');
   }
 
   return equipment;
+}
+
+export async function getEquipmentWeather(id: string): Promise<EquipmentWeather> {
+  const equipment = await getEquipmentById(id);
+
+  try {
+    const weather = await getForecastByCoordinates(
+      equipment.location.lat,
+      equipment.location.lon,
+      DEFAULT_DAYS,
+    );
+
+    return {
+      equipmentId: equipment.id,
+      weather,
+      outdoorWorkSuitable: isOutdoorWorkSuitable(weather.forecast, loadConfig().maxWindSpeed),
+    };
+  } catch (error) {
+    throw mapWeatherError(error);
+  }
 }
 
 /**
@@ -60,11 +80,11 @@ export async function listEquipment(query: EquipmentListQuery): Promise<Equipmen
   const items = await equipmentRepository.findAll();
   const filtered = items.filter((item) => matchesFilters(item, query));
   const total = filtered.length;
-  const sortBy = parseSortBy(query.sortBy);
-  const order = parseOrder(query.order);
+  const sortBy = query.sortBy ?? DEFAULT_SORT_BY;
+  const order = query.order ?? DEFAULT_ORDER;
   const sorted = [...filtered].sort((left, right) => compareEquipment(left, right, sortBy, order));
-  const page = parsePage(query.page);
-  const limit = parseLimit(query.limit);
+  const page = query.page ?? DEFAULT_PAGE;
+  const limit = query.limit ?? DEFAULT_LIMIT;
   const start = (page - 1) * limit;
 
   return {
@@ -73,9 +93,11 @@ export async function listEquipment(query: EquipmentListQuery): Promise<Equipmen
   };
 }
 
-export async function updateEquipment(id: string, input: unknown): Promise<Equipment> {
+export async function updateEquipment(
+  id: string,
+  changes: UpdateEquipmentInput,
+): Promise<Equipment> {
   const current = await getEquipmentById(id);
-  const changes = parseUpdateInput(input);
 
   if (changes.serialNumber !== undefined && changes.serialNumber !== current.serialNumber) {
     await assertSerialNumberAvailable(changes.serialNumber);
@@ -90,7 +112,7 @@ export async function updateEquipment(id: string, input: unknown): Promise<Equip
   const saved = await equipmentRepository.update(updated);
 
   if (saved === null) {
-    throw new HttpError(404, 'Equipment not found');
+    throw new NotFoundError('Equipment not found');
   }
 
   return saved;
@@ -100,13 +122,13 @@ export async function deleteEquipment(id: string): Promise<void> {
   await getEquipmentById(id);
 
   if (await requestService.hasOpenRequests(id)) {
-    throw new HttpError(409, 'Equipment has open maintenance requests');
+    throw new ConflictError('Equipment has open maintenance requests');
   }
 
   const deleted = await equipmentRepository.remove(id);
 
   if (!deleted) {
-    throw new HttpError(404, 'Equipment not found');
+    throw new NotFoundError('Equipment not found');
   }
 }
 
@@ -114,7 +136,7 @@ async function assertSerialNumberAvailable(serialNumber: string): Promise<void> 
   const existing = await equipmentRepository.findBySerialNumber(serialNumber);
 
   if (existing !== null) {
-    throw new HttpError(409, 'Equipment with this serialNumber already exists');
+    throw new ConflictError('Equipment with this serialNumber already exists');
   }
 }
 
@@ -160,176 +182,6 @@ function compareEquipment(
   return directed !== 0 ? directed : left.id.localeCompare(right.id);
 }
 
-function parseCreateInput(input: unknown): CreateEquipmentInput {
-  if (!isRecord(input)) {
-    throw new HttpError(400, 'Invalid equipment payload');
-  }
-
-  return {
-    name: parseName(input.name),
-    type: parseType(input.type),
-    serialNumber: parseSerialNumber(input.serialNumber),
-    location: parseLocation(input.location),
-    status: parseStatus(input.status),
-    installedAt: parseInstalledAt(input.installedAt),
-  };
-}
-
-function parseUpdateInput(input: unknown): UpdateEquipmentInput {
-  if (!isRecord(input)) {
-    throw new HttpError(400, 'Invalid equipment payload');
-  }
-
-  const changes: UpdateEquipmentInput = {};
-
-  if (input.name !== undefined) {
-    changes.name = parseName(input.name);
-  }
-
-  if (input.type !== undefined) {
-    changes.type = parseType(input.type);
-  }
-
-  if (input.serialNumber !== undefined) {
-    changes.serialNumber = parseSerialNumber(input.serialNumber);
-  }
-
-  if (input.location !== undefined) {
-    changes.location = parseLocation(input.location);
-  }
-
-  if (input.status !== undefined) {
-    changes.status = parseStatus(input.status);
-  }
-
-  if (input.installedAt !== undefined) {
-    changes.installedAt = parseInstalledAt(input.installedAt);
-  }
-
-  return changes;
-}
-
-function parseName(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new HttpError(400, 'name must be a string between 3 and 100 characters');
-  }
-
-  const name = value.trim();
-
-  if (name.length < 3 || name.length > 100) {
-    throw new HttpError(400, 'name must be a string between 3 and 100 characters');
-  }
-
-  return name;
-}
-
-function parseType(value: unknown): EquipmentType {
-  if (!isEquipmentType(value)) {
-    throw new HttpError(400, `type must be one of: ${EQUIPMENT_TYPES.join(', ')}`);
-  }
-
-  return value;
-}
-
-function parseSerialNumber(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new HttpError(400, 'serialNumber is required');
-  }
-
-  const serialNumber = value.trim();
-
-  if (serialNumber.length === 0) {
-    throw new HttpError(400, 'serialNumber is required');
-  }
-
-  return serialNumber;
-}
-
-function parseLocation(value: unknown): GeoLocation {
-  if (!isRecord(value)) {
-    throw new HttpError(400, 'location must be an object with lat and lon');
-  }
-
-  const { lat, lon } = value;
-
-  if (typeof lat !== 'number' || !Number.isFinite(lat) || lat < -90 || lat > 90) {
-    throw new HttpError(400, 'location.lat must be a number between -90 and 90');
-  }
-
-  if (typeof lon !== 'number' || !Number.isFinite(lon) || lon < -180 || lon > 180) {
-    throw new HttpError(400, 'location.lon must be a number between -180 and 180');
-  }
-
-  return { lat, lon };
-}
-
-function parseStatus(value: unknown): EquipmentStatus {
-  if (!isEquipmentStatus(value)) {
-    throw new HttpError(400, `status must be one of: ${EQUIPMENT_STATUSES.join(', ')}`);
-  }
-
-  return value;
-}
-
-function parseInstalledAt(value: unknown): string {
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw new HttpError(400, 'installedAt must be a valid ISO date');
-  }
-
-  const installedAt = value.trim();
-  const installedDate = toDateOnly(installedAt);
-
-  if (installedDate === null) {
-    throw new HttpError(400, 'installedAt must be a valid ISO date');
-  }
-
-  const today = new Date().toISOString().slice(0, 10);
-
-  if (installedDate > today) {
-    throw new HttpError(400, 'installedAt must not be in the future');
-  }
-
-  return installedAt;
-}
-
-function parseSortBy(value: string | undefined): EquipmentSortField {
-  if (value === undefined || !isEquipmentSortField(value)) {
-    return DEFAULT_SORT_BY;
-  }
-
-  return value;
-}
-
-function parseOrder(value: string | undefined): SortOrder {
-  if (value === undefined || !isSortOrder(value)) {
-    return DEFAULT_ORDER;
-  }
-
-  return value;
-}
-
-function parsePage(value: string | undefined): number {
-  return parsePositiveInt(value, DEFAULT_PAGE);
-}
-
-function parseLimit(value: string | undefined): number {
-  return Math.min(parsePositiveInt(value, DEFAULT_LIMIT), MAX_LIMIT);
-}
-
-function parsePositiveInt(value: string | undefined, fallback: number): number {
-  if (value === undefined) {
-    return fallback;
-  }
-
-  const parsed = Number(value);
-
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    return fallback;
-  }
-
-  return parsed;
-}
-
 function toDateOnly(value: string): string | null {
   const timestamp = Date.parse(value);
 
@@ -338,4 +190,22 @@ function toDateOnly(value: string): string | null {
   }
 
   return new Date(timestamp).toISOString().slice(0, 10);
+}
+
+function mapWeatherError(error: unknown): ExternalServiceError {
+  if (error instanceof TimeoutError) {
+    return new ExternalServiceError('Weather service request timed out', { cause: error });
+  }
+
+  if (error instanceof InvalidJsonError || error instanceof InvalidApiResponseError) {
+    return new ExternalServiceError('Weather service returned an invalid response', {
+      cause: error,
+    });
+  }
+
+  if (error instanceof NetworkError || error instanceof HttpStatusError) {
+    return new ExternalServiceError('Weather service is unavailable', { cause: error });
+  }
+
+  return new ExternalServiceError('Weather service is unavailable', { cause: error });
 }
