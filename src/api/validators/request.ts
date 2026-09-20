@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_REQUEST_IMPORT_ITEMS } from '../../config/constants.js';
 import { REQUEST_PRIORITIES, REQUEST_SORT_FIELDS, REQUEST_STATUSES } from '../../types/request.js';
 import {
   idParamsSchema,
@@ -15,6 +16,15 @@ export const createRequestBodySchema = z.object({
   description: z.string().trim().max(2000),
   priority: z.enum(REQUEST_PRIORITIES, { error: 'Недопустимое значение' }),
   plannedAt: isoDateTimeSchema.optional(),
+});
+
+export const importRequestsBodySchema = z.object({
+  items: z
+    .array(z.unknown())
+    .min(1, { error: 'items должен содержать хотя бы одну запись' })
+    .max(MAX_REQUEST_IMPORT_ITEMS, {
+      error: `items не может содержать больше ${MAX_REQUEST_IMPORT_ITEMS} записей`,
+    }),
 });
 
 export const updateRequestBodySchema = z.object({

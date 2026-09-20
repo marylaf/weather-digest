@@ -69,6 +69,37 @@ export interface RequestListResult {
   meta: RequestListMeta;
 }
 
+export interface ImportRequestError {
+  code: string;
+  message: string;
+  details?: readonly { field: string; message: string }[];
+}
+
+export interface ImportRequestSuccess {
+  index: number;
+  ok: true;
+  data: MaintenanceRequest;
+}
+
+export interface ImportRequestFailure {
+  index: number;
+  ok: false;
+  error: ImportRequestError;
+}
+
+export type ImportRequestItemResult = ImportRequestSuccess | ImportRequestFailure;
+
+export interface ImportRequestsMeta {
+  total: number;
+  succeeded: number;
+  failed: number;
+}
+
+export interface ImportRequestsResult {
+  meta: ImportRequestsMeta;
+  results: ImportRequestItemResult[];
+}
+
 export function isRequestPriority(value: unknown): value is RequestPriority {
   return typeof value === 'string' && REQUEST_PRIORITIES.some((priority) => priority === value);
 }

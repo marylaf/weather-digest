@@ -1,3 +1,4 @@
+import { MAX_REQUEST_IMPORT_ITEMS } from '../../src/config/constants.js';
 import { requestPayload } from '../helpers/fixtures.js';
 import {
   api,
@@ -117,5 +118,96 @@ describe('/api/requests', () => {
   it('возвращает 404 для неизвестной заявки', async () => {
     const response = await api().get('/api/requests/missing-id');
     expectApiError(response, 404, 'NOT_FOUND');
+  });
+
+  describe('POST /api/requests/import', () => {
+    it('создаёт все валидные заявки и возвращает отчёт', async () => {
+      const equipment = await createEquipment();
+      const items = [
+        requestPayload(equipment.id, { title: 'First import request' }),
+        requestPayload(equipment.id, { title: 'Second import request', priority: 'high' }),
+      ];
+
+      const response = await withApiKey(api().post('/api/requests/import'))
+        .send({ items })
+        .expect(201);
+
+      expect(response.body.meta).toEqual({ total: 2, succeeded: 2, failed: 0 });
+      expect(response.body.results).toHaveLength(2);
+      expect(response.body.results[0]).toMatchObject({
+        index: 0,
+        ok: true,
+        data: { title: 'First import request', status: 'new', equipmentId: equipment.id },
+      });
+      expect(response.body.results[1]).toMatchObject({
+        index: 1,
+        ok: true,
+        data: { title: 'Second import request', priority: 'high' },
+      });
+
+      const listed = await api().get('/api/requests').expect(200);
+      expect(listed.body.meta.total).toBe(2);
+    });
+
+    it('принимает валидные записи и сообщает об ошибках остальных', async () => {
+      const equipment = await createEquipment();
+      const items = [
+        requestPayload(equipment.id, { title: 'Valid import request' }),
+        { ...requestPayload(equipment.id), title: 'abc' },
+        requestPayload('missing-equipment', { title: 'Unknown equipment request' }),
+      ];
+
+      const response = await withApiKey(api().post('/api/requests/import'))
+        .send({ items })
+        .expect(207);
+
+      expect(response.body.meta).toEqual({ total: 3, succeeded: 1, failed: 2 });
+      expect(response.body.results[0]).toMatchObject({
+        index: 0,
+        ok: true,
+        data: { title: 'Valid import request' },
+      });
+      expect(response.body.results[1]).toMatchObject({
+        index: 1,
+        ok: false,
+        error: { code: 'VALIDATION_ERROR', message: expect.any(String) },
+      });
+      expect(response.body.results[1].error.details).toEqual(
+        expect.arrayContaining([expect.objectContaining({ field: 'title' })]),
+      );
+      expect(response.body.results[2]).toMatchObject({
+        index: 2,
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Equipment not found' },
+      });
+
+      const listed = await api().get('/api/requests').expect(200);
+      expect(listed.body.meta.total).toBe(1);
+      expect(listed.body.data[0]).toMatchObject({ title: 'Valid import request' });
+    });
+
+    it('возвращает отчёт, если все записи отклонены', async () => {
+      const response = await withApiKey(api().post('/api/requests/import'))
+        .send({
+          items: [{ title: 'abc' }, requestPayload('missing-equipment')],
+        })
+        .expect(207);
+
+      expect(response.body.meta).toEqual({ total: 2, succeeded: 0, failed: 2 });
+      expect(response.body.results.every((item: { ok: boolean }) => item.ok === false)).toBe(true);
+
+      const listed = await api().get('/api/requests').expect(200);
+      expect(listed.body.meta.total).toBe(0);
+    });
+
+    it('отклоняет пустой список и слишком большой пакет', async () => {
+      const empty = await withApiKey(api().post('/api/requests/import')).send({ items: [] });
+      expectApiError(empty, 400, 'VALIDATION_ERROR');
+
+      const tooMany = await withApiKey(api().post('/api/requests/import')).send({
+        items: Array.from({ length: MAX_REQUEST_IMPORT_ITEMS + 1 }, () => ({})),
+      });
+      expectApiError(tooMany, 400, 'VALIDATION_ERROR');
+    });
   });
 });
