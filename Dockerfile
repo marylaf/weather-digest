@@ -18,6 +18,7 @@ RUN addgroup -S app \
     && chown -R app:app /app
 
 COPY --from=build --chown=app:app /app/package.json ./
+COPY --from=build --chown=app:app /app/node_modules/dotenv ./node_modules/dotenv
 COPY --from=build --chown=app:app /app/dist ./dist
 
 USER app

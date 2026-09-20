@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { parseCliArgs } from './config/parseArgs.js';
 import { formatCityError, formatWeather } from './format/consoleFormatter.js';
 import { getWeatherDigests } from './services/digestService.js';
