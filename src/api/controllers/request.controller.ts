@@ -33,6 +33,11 @@ export async function deleteRequest(req: Request, res: Response): Promise<void> 
   res.status(204).end();
 }
 
+export async function listRequestsByEquipmentId(req: Request, res: Response): Promise<void> {
+  const data = await requestService.listRequestsByEquipmentId(requireId(req, 'equipment'));
+  res.status(200).json({ data });
+}
+
 function requireId(req: Request, label: string): string {
   const id = req.params.id;
 

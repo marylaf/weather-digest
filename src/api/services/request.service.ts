@@ -14,6 +14,7 @@ import type {
 import {
   REQUEST_PRIORITIES,
   REQUEST_STATUSES,
+  isOpenRequestStatus,
   isRequestPriority,
   isRequestSortField,
   isRequestStatus,
@@ -93,6 +94,13 @@ export async function listRequests(query: RequestListQuery): Promise<RequestList
   };
 }
 
+export async function listRequestsByEquipmentId(
+  equipmentId: string,
+): Promise<MaintenanceRequest[]> {
+  await assertEquipmentExists(equipmentId);
+  return requestRepository.findByEquipmentId(equipmentId);
+}
+
 export async function updateRequest(id: string, input: unknown): Promise<MaintenanceRequest> {
   const current = await getRequestById(id);
   const changes = parseUpdateInput(input);
@@ -143,6 +151,11 @@ export async function deleteRequest(id: string): Promise<void> {
   if (!deleted) {
     throw new HttpError(404, 'Maintenance request not found');
   }
+}
+
+export async function hasOpenRequests(equipmentId: string): Promise<boolean> {
+  const items = await requestRepository.findByEquipmentId(equipmentId);
+  return items.some((item) => isOpenRequestStatus(item.status));
 }
 
 async function assertEquipmentExists(equipmentId: string): Promise<void> {
