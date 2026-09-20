@@ -1,15 +1,16 @@
 import type { Units } from './config.js';
 import type { DailyForecast } from './forecast.js';
+import type { Coordinates } from './geocoding.js';
 
-export interface CityWeather {
-  city: string;
-  country: string;
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  };
+export interface WeatherForecast {
+  coordinates: Coordinates;
   units: Units;
   forecast: DailyForecast[];
+}
+
+export interface CityWeather extends WeatherForecast {
+  city: string;
+  country: string;
 }
 
 export interface CityWeatherSuccess {

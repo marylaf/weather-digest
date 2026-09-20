@@ -1,21 +1,33 @@
 import { getCoordinates } from '../api/geocodingApi.js';
 import { getForecast } from '../api/weatherApi.js';
 import { loadConfig } from '../config/appConfig.js';
-import type { CityWeather, CityWeatherResult } from '../types/weather.js';
+import type { CityWeather, CityWeatherResult, WeatherForecast } from '../types/weather.js';
+
+export async function getForecastByCoordinates(
+  latitude: number,
+  longitude: number,
+  days: number,
+): Promise<WeatherForecast> {
+  const forecast = await getForecast(latitude, longitude, days);
+
+  return {
+    coordinates: {
+      latitude,
+      longitude,
+    },
+    units: loadConfig().units,
+    forecast,
+  };
+}
 
 export async function getWeatherForCity(city: string, days: number): Promise<CityWeather> {
   const location = await getCoordinates(city);
-  const forecast = await getForecast(location.latitude, location.longitude, days);
+  const weather = await getForecastByCoordinates(location.latitude, location.longitude, days);
 
   return {
     city: location.name,
     country: location.country,
-    coordinates: {
-      latitude: location.latitude,
-      longitude: location.longitude,
-    },
-    units: loadConfig().units,
-    forecast,
+    ...weather,
   };
 }
 
