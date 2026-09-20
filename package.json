@@ -17,7 +17,9 @@
     "format": "prettier --write .",
     "web": "vite --config web/vite.config.ts",
     "web:build": "vite build --config web/vite.config.ts",
-    "web:preview": "vite preview --config web/vite.config.ts"
+    "web:preview": "vite preview --config web/vite.config.ts",
+    "api": "tsx src/api/server.ts",
+    "api:dev": "tsx --watch src/api/server.ts"
   },
   "keywords": [
     "weather"
@@ -25,6 +27,7 @@
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
     "@types/node": "^26.5.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -41,6 +44,7 @@
   },
   "dependencies": {
     "dotenv": "^18.0.1",
+    "express": "^5.2.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   }
