@@ -11,9 +11,15 @@ export default defineConfig(
   js.configs.recommended,
   tseslint.configs.recommended,
   {
-    files: ['src/**/*.ts', 'web/vite.config.ts'],
+    files: ['src/**/*.ts', 'web/vite.config.ts', 'tests/**/*.ts'],
     languageOptions: {
       globals: globals.node,
+    },
+  },
+  {
+    files: ['tests/**/*.ts'],
+    languageOptions: {
+      globals: globals.jest,
     },
   },
   {
