@@ -6,4 +6,6 @@ export interface AppConfig {
   timeoutMs: number;
   reportsDir: string;
   units: Units;
+  port: number;
+  nodeEnv: string;
 }
