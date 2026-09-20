@@ -12,4 +12,5 @@ if (!apiKey) {
 
 app.listen(port, () => {
   logger.info({ port }, `API listening on http://localhost:${port}`);
+  logger.info(`Requests UI: http://localhost:${port}/`);
 });

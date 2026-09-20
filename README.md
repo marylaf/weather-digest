@@ -72,6 +72,9 @@ npm run dev -- --city "Москва" --days 3
 npm run build
 node dist/index.js --city "Москва" --days 3
 
+# REST API и HTML-страница заявок (http://localhost:3000)
+npm run api
+
 # Docker Compose (читает .env)
 docker compose run --rm weather-digest
 ```
@@ -119,6 +122,10 @@ npm run web         # просмотр сохранённых отчётов в 
 
 Отчёт также пишется в `reports/<город>-<YYYY-MM-DD>.json`.
 
+## Страница заявок
+
+После `npm run api` откройте [http://localhost:3000](http://localhost:3000). На странице только список заявок с фильтрами и форма создания. Для POST в форме укажите `API_KEY` (заголовок `X-API-Key`).
+
 ## Ошибки и коды завершения
 
 | Код | Когда                                                                       |
@@ -164,6 +171,7 @@ weather-digest/
 │   ├── types/                # типы CLI, конфига, погоды
 │   └── utils/
 ├── tests/                    # автотесты API (Jest + Supertest)
+├── public/                   # HTML-страница заявок (fetch к REST API)
 ├── web/                      # просмотр сохранённых отчётов (Vite + React)
 ├── docs/postman/             # коллекция запросов к Open-Meteo
 ├── reports/                  # кэш отчётов (создаётся при запуске)

@@ -28,5 +28,11 @@ export default defineConfig(
       globals: globals.browser,
     },
   },
+  {
+    files: ['public/**/*.js'],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
   eslintConfigPrettier,
 );
