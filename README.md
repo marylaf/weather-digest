@@ -76,6 +76,7 @@ docker compose run --rm weather-digest
 Дополнительно:
 
 ```bash
+npm test            # автотесты API на Jest + Supertest
 npm run typecheck   # проверка типов
 npm run lint        # ESLint и Prettier
 npm run web         # просмотр сохранённых отчётов в браузере
@@ -159,6 +160,7 @@ weather-digest/
 │   ├── storage/              # чтение/запись JSON-отчётов
 │   ├── types/                # типы CLI, конфига, погоды
 │   └── utils/
+├── tests/                    # автотесты API (Jest + Supertest)
 ├── web/                      # просмотр сохранённых отчётов (Vite + React)
 ├── docs/postman/             # коллекция запросов к Open-Meteo
 ├── reports/                  # кэш отчётов (создаётся при запуске)
