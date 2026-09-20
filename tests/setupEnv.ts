@@ -9,6 +9,7 @@ mkdirSync(dir, { recursive: true });
 
 process.env.NODE_ENV = 'test';
 process.env.LOG_LEVEL = 'silent';
+process.env.API_KEY = 'test-api-key';
 process.env.RATE_LIMIT_MAX = '10000';
 process.env.EQUIPMENT_FILE = path.join(dir, 'equipment.json');
 process.env.REQUESTS_FILE = path.join(dir, 'requests.json');

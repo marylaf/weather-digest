@@ -18,7 +18,7 @@ export function createCorsMiddleware() {
       callback(null, allowed.has(origin));
     },
     methods: ALLOWED_METHODS,
-    allowedHeaders: ['Content-Type', 'X-Request-Id'],
+    allowedHeaders: ['Content-Type', 'X-Request-Id', 'X-API-Key', 'Authorization'],
     exposedHeaders: ['X-Request-Id'],
     optionsSuccessStatus: 204,
   };

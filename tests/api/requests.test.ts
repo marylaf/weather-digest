@@ -1,5 +1,11 @@
 import { requestPayload } from '../helpers/fixtures.js';
-import { api, createEquipment, createRequest, expectApiError } from '../helpers/http.js';
+import {
+  api,
+  createEquipment,
+  createRequest,
+  expectApiError,
+  withApiKey,
+} from '../helpers/http.js';
 import { resetStore } from '../helpers/store.js';
 
 describe('/api/requests', () => {
@@ -10,7 +16,7 @@ describe('/api/requests', () => {
   it('создаёт заявку для существующего оборудования', async () => {
     const equipment = await createEquipment();
     const payload = requestPayload(equipment.id);
-    const created = await api().post('/api/requests').send(payload).expect(201);
+    const created = await withApiKey(api().post('/api/requests')).send(payload).expect(201);
 
     expect(created.headers.location).toBe(`/api/requests/${created.body.data.id}`);
     expect(created.body.data).toMatchObject({
@@ -26,7 +32,9 @@ describe('/api/requests', () => {
   });
 
   it('не создаёт заявку для неизвестного оборудования', async () => {
-    const response = await api().post('/api/requests').send(requestPayload('missing-equipment'));
+    const response = await withApiKey(api().post('/api/requests')).send(
+      requestPayload('missing-equipment'),
+    );
     expectApiError(response, 404, 'NOT_FOUND');
   });
 
@@ -34,8 +42,7 @@ describe('/api/requests', () => {
     const equipment = await createEquipment();
     await createRequest(equipment.id, { title: 'First open request' });
     const second = await createRequest(equipment.id, { title: 'Second open request' });
-    await api()
-      .patch(`/api/requests/${second.id}/status`)
+    await withApiKey(api().patch(`/api/requests/${second.id}/status`))
       .send({ status: 'in_progress' })
       .expect(200);
 
@@ -49,8 +56,7 @@ describe('/api/requests', () => {
   it('обновляет поля заявки без смены статуса', async () => {
     const equipment = await createEquipment();
     const requestItem = await createRequest(equipment.id);
-    const response = await api()
-      .patch(`/api/requests/${requestItem.id}`)
+    const response = await withApiKey(api().patch(`/api/requests/${requestItem.id}`))
       .send({ title: 'Updated request title', priority: 'high' })
       .expect(200);
 
@@ -67,14 +73,12 @@ describe('/api/requests', () => {
     const equipment = await createEquipment();
     const requestItem = await createRequest(equipment.id);
 
-    const inProgress = await api()
-      .patch(`/api/requests/${requestItem.id}/status`)
+    const inProgress = await withApiKey(api().patch(`/api/requests/${requestItem.id}/status`))
       .send({ status: 'in_progress' })
       .expect(200);
     expect(inProgress.body.data.status).toBe('in_progress');
 
-    const done = await api()
-      .patch(`/api/requests/${requestItem.id}/status`)
+    const done = await withApiKey(api().patch(`/api/requests/${requestItem.id}/status`))
       .send({ status: 'done' })
       .expect(200);
     expect(done.body.data.status).toBe('done');
@@ -84,9 +88,9 @@ describe('/api/requests', () => {
     const equipment = await createEquipment();
     const requestItem = await createRequest(equipment.id);
 
-    const response = await api()
-      .patch(`/api/requests/${requestItem.id}/status`)
-      .send({ status: 'done' });
+    const response = await withApiKey(api().patch(`/api/requests/${requestItem.id}/status`)).send({
+      status: 'done',
+    });
 
     expectApiError(response, 409, 'CONFLICT');
   });
@@ -95,16 +99,17 @@ describe('/api/requests', () => {
     const equipment = await createEquipment();
     const requestItem = await createRequest(equipment.id);
 
-    await api().delete(`/api/requests/${requestItem.id}`).expect(204);
+    await withApiKey(api().delete(`/api/requests/${requestItem.id}`)).expect(204);
     const missing = await api().get(`/api/requests/${requestItem.id}`);
     expectApiError(missing, 404, 'NOT_FOUND');
   });
 
   it('отклоняет создание с невалидным телом', async () => {
     const equipment = await createEquipment();
-    const response = await api()
-      .post('/api/requests')
-      .send({ ...requestPayload(equipment.id), title: 'abc' });
+    const response = await withApiKey(api().post('/api/requests')).send({
+      ...requestPayload(equipment.id),
+      title: 'abc',
+    });
 
     expectApiError(response, 400, 'VALIDATION_ERROR');
   });

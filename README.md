@@ -32,8 +32,11 @@ npm install
 | `TIMEOUT_MS`    | Таймаут HTTP-запросов в миллисекундах                                   | `5000`                                           |
 | `REPORTS_DIR`   | Каталог для JSON-отчётов                                                | `./reports`                                      |
 | `UNITS`         | Единицы: `metric` (°C, мм) или `imperial` (°F, in)                      | `metric`                                         |
+| `API_KEY`       | Секрет для POST, PATCH и DELETE REST API. Обязателен для `npm run api`  | —                                                |
 
 Флаги CLI имеют приоритет над `CITY`, `DAYS` и `NO_CACHE`.
+
+Изменяющие запросы REST API (`POST`, `PATCH`, `DELETE`) требуют ключ в заголовке `X-API-Key` или `Authorization: Bearer <ключ>`. GET остаётся открытым. Без ключа или с неверным значением ответ — `401 UNAUTHORIZED`.
 
 ## Запуск
 
