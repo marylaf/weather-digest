@@ -84,7 +84,12 @@ export function renderReport(
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
   const labels = getUnitLabels(report.units);
-  for (const header of ['Дата', `Мин. ${labels.temperature}`, `Макс. ${labels.temperature}`, 'Осадки']) {
+  for (const header of [
+    'Дата',
+    `Мин. ${labels.temperature}`,
+    `Макс. ${labels.temperature}`,
+    'Осадки',
+  ]) {
     headRow.append(createCell('th', header));
   }
   thead.append(headRow);

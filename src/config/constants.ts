@@ -8,3 +8,7 @@ export const DEFAULT_TIMEOUT_MS = 5_000;
 
 export const REPORTS_DIR = './reports';
 export const DEFAULT_UNITS = 'metric' as const;
+
+export const DEFAULT_PORT = 3_000;
+export const DEFAULT_NODE_ENV = 'development';
+export const DEFAULT_EQUIPMENT_FILE = './data/equipment.json';

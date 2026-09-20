@@ -1,6 +1,7 @@
 node_modules
 dist
 reports
+data
 .git
 .gitignore
 .env

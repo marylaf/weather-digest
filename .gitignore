@@ -3,4 +3,5 @@ dist/
 web/dist/
 .env
 reports/
+data/
 .DS_Store

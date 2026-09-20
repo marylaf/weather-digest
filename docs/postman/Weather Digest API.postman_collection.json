@@ -14,13 +14,8 @@
         "header": [],
         "url": {
           "raw": "{{geocodingBaseUrl}}/v1/search?name={{city}}&count=1&language=ru&format=json",
-          "host": [
-            "{{geocodingBaseUrl}}"
-          ],
-          "path": [
-            "v1",
-            "search"
-          ],
+          "host": ["{{geocodingBaseUrl}}"],
+          "path": ["v1", "search"],
           "query": [
             {
               "key": "name",
@@ -49,13 +44,8 @@
             "header": [],
             "url": {
               "raw": "{{geocodingBaseUrl}}/v1/search?name={{city}}&count=1&language=ru&format=json",
-              "host": [
-                "{{geocodingBaseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "search"
-              ],
+              "host": ["{{geocodingBaseUrl}}"],
+              "path": ["v1", "search"],
               "query": [
                 {
                   "key": "name",
@@ -115,13 +105,8 @@
             "header": [],
             "url": {
               "raw": "{{geocodingBaseUrl}}/v1/search?name=Кисапппп&count=1&language=ru&format=json",
-              "host": [
-                "{{geocodingBaseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "search"
-              ],
+              "host": ["{{geocodingBaseUrl}}"],
+              "path": ["v1", "search"],
               "query": [
                 {
                   "key": "name",
@@ -183,13 +168,8 @@
         "header": [],
         "url": {
           "raw": "{{forecastBaseUrl}}/v1/forecast?latitude={{lat}}&longitude={{lon}}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days={{days}}&timezone=auto",
-          "host": [
-            "{{forecastBaseUrl}}"
-          ],
-          "path": [
-            "v1",
-            "forecast"
-          ],
+          "host": ["{{forecastBaseUrl}}"],
+          "path": ["v1", "forecast"],
           "query": [
             {
               "key": "latitude",
@@ -222,13 +202,8 @@
             "header": [],
             "url": {
               "raw": "{{forecastBaseUrl}}/v1/forecast?latitude={{lat}}&longitude={{lon}}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days={{days}}&timezone=auto",
-              "host": [
-                "{{forecastBaseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "forecast"
-              ],
+              "host": ["{{forecastBaseUrl}}"],
+              "path": ["v1", "forecast"],
               "query": [
                 {
                   "key": "latitude",
@@ -288,13 +263,8 @@
             "header": [],
             "url": {
               "raw": "{{forecastBaseUrl}}/v1/forecast?latitude=aschd&longitude={{lon}}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&forecast_days={{days}}&timezone=auto",
-              "host": [
-                "{{forecastBaseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "forecast"
-              ],
+              "host": ["{{forecastBaseUrl}}"],
+              "path": ["v1", "forecast"],
               "query": [
                 {
                   "key": "latitude",
