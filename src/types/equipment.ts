@@ -55,14 +55,14 @@ export interface UpdateEquipmentInput {
 }
 
 export interface EquipmentListQuery {
-  status?: string;
-  type?: string;
+  status?: EquipmentStatus;
+  type?: EquipmentType;
   installedFrom?: string;
   installedTo?: string;
-  sortBy?: string;
-  order?: string;
-  page?: string;
-  limit?: string;
+  sortBy?: EquipmentSortField;
+  order?: SortOrder;
+  page?: number;
+  limit?: number;
 }
 
 export interface EquipmentListMeta {
