@@ -18,13 +18,14 @@ npm run api
 
 Нужны Node.js 20+, npm и доступ к Open-Meteo (для `GET /api/equipment/:id/weather`).
 
-| Команда                        | Назначение                                    |
-| ------------------------------ | --------------------------------------------- |
-| `npm run api`                  | Express API и HTML-страница заявок на `:3000` |
-| `npm run api:dev`              | то же с перезапуском при изменениях           |
-| `npm test`                     | Jest + Supertest                              |
-| `npm run web`                  | Vite-просмотр сохранённых отчётов на `:5173`  |
-| `npm start -- --city "Москва"` | CLI-сводка погоды (отдельный режим)           |
+| Команда                         | Назначение                                    |
+| ------------------------------- | --------------------------------------------- |
+| `npm run api`                   | Express API и HTML-страница заявок на `:3000` |
+| `npm run api:dev`               | то же с перезапуском при изменениях           |
+| `npm test`                      | Jest + Supertest                              |
+| `docker compose up --build api` | API в контейнере на `:3000`                   |
+| `npm run web`                   | Vite-просмотр сохранённых отчётов на `:5173`  |
+| `npm start -- --city "Москва"`  | CLI-сводка погоды (отдельный режим)           |
 
 ## Эндпоинты
 
@@ -36,7 +37,7 @@ npm run api
 | `GET`    | `/api/equipment/:id`          | нет  | `200`         | Карточка оборудования                                                                                                     |
 | `PATCH`  | `/api/equipment/:id`          | да   | `200`         | Частичное обновление                                                                                                      |
 | `DELETE` | `/api/equipment/:id`          | да   | `204`         | Удалить, если нет открытых заявок (`new` / `in_progress`)                                                                 |
-| `GET`    | `/api/equipment/:id/requests` | нет  | `200`         | Заявки по оборудованию                                                                                                    |
+| `GET`    | `/api/equipment/:id/requests` | нет  | `200`         | Заявки по оборудованию. Query: `status`, `priority`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit`       |
 | `GET`    | `/api/equipment/:id/weather`  | нет  | `200`         | Прогноз Open-Meteo и флаг `outdoorWorkSuitable`                                                                           |
 | `GET`    | `/api/requests`               | нет  | `200`         | Список заявок. Query: `status`, `priority`, `equipmentId`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit` |
 | `POST`   | `/api/requests`               | да   | `201`         | Создать заявку (`status` всегда `new`). `Location: /api/requests/:id`                                                     |
@@ -118,7 +119,8 @@ stateDiagram-v2
 
 | HTTP | `code`                         | Когда                                                                    |
 | ---- | ------------------------------ | ------------------------------------------------------------------------ |
-| 400  | `VALIDATION_ERROR`             | Zod: тело, query или params; битый JSON                                  |
+| 400  | `VALIDATION_ERROR`             | битый JSON, который Express не смог разобрать                            |
+| 422  | `VALIDATION_ERROR`             | Zod: невалидные body, query или params                                   |
 | 401  | `UNAUTHORIZED`                 | нет или неверный ключ на POST/PATCH/DELETE                               |
 | 404  | `NOT_FOUND`                    | неизвестный id, маршрут или `equipmentId` при создании заявки            |
 | 409  | `CONFLICT`                     | занятый `serialNumber`, открытые заявки при удалении, запрещённый статус |
@@ -166,9 +168,9 @@ Location: /api/equipment/8f3c1a2b-4d5e-6f70-8192-a3b4c5d6e7f8
 
 Так же создаётся заявка: `POST /api/requests` с `equipmentId`, `title` (≥ 5 символов), `description`, `priority`. Сервер ставит `status: "new"`.
 
-### 400 VALIDATION_ERROR
+### 422 VALIDATION_ERROR
 
-`name` короче 3 символов:
+`name` короче 3 символов (схема Zod). Битый JSON (`{"name":`) даёт тот же `code`, но HTTP **400**.
 
 ```bash
 curl -s http://localhost:3000/api/equipment \
@@ -221,6 +223,17 @@ curl -s http://localhost:3000/api/equipment \
 - `PATCH /api/requests/:id/status` с `{ "status": "done" }` у заявки в `new` → `Cannot transition status from new to done`
 - `DELETE /api/equipment/:id`, пока есть заявки `new` / `in_progress` → `Equipment has open maintenance requests`
 
+### 400 VALIDATION_ERROR
+
+```bash
+curl -s http://localhost:3000/api/equipment \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -d '{"name":'
+```
+
+Ответ: `400`, `code: "VALIDATION_ERROR"`, `details[0].field: "body"`.
+
 ## CORS
 
 Allowlist, не `*`. По умолчанию:
@@ -244,6 +257,10 @@ Allowlist, не `*`. По умолчанию:
 | `RATE_LIMIT_MAX`       | `100`        | запросов с одного IP за окно |
 
 При превышении — `429` с `code: "RATE_LIMIT_EXCEEDED"` и `message: "Too many requests"`. В ответе стандартные заголовки `RateLimit-*`.
+
+Тело JSON ограничено `JSON_BODY_LIMIT` (по умолчанию `100kb`) — сверх лимита `413 PAYLOAD_TOO_LARGE`. Защитные заголовки ставит `helmet`.
+
+Cookie не используются: аутентификация идёт заголовком `X-API-Key` / `Authorization`, сессии нет. Поэтому флаги `HttpOnly`, `Secure` и `SameSite` не выставляются — выставлять SameSite без cookie бессмысленно.
 
 ## Правило погоды
 
@@ -322,11 +339,33 @@ src/api/
 
 Поток: **route → validate → controller → service → repository**. Ошибки сервиса (`ValidationError`, `NotFoundError`, `ConflictError`, …) ловит `errorHandler`.
 
+Порядок middleware в `app.ts` (и почему так):
+
+1. `requestId` — сразу выдаёт `X-Request-Id`, чтобы он был в логах и в ошибках, даже если дальше упадёт разбор JSON.
+2. `requestLogger` (pino-http) — метод, путь, статус, duration, `requestId`.
+3. `helmet` и CORS — заголовки и origin до чтения тела.
+4. `express.json({ limit })` — размер тела и парсинг JSON.
+5. rate limit и API-ключ только на `/api`.
+6. роуты с `validate()` (body / params / query).
+7. `notFound` → `errorHandler`.
+
+Задание перечисляет «лог → JSON → requestId». Request id стоит раньше лога специально: иначе первый лог был бы без идентификатора, по которому потом ищут запись.
+
+## Docker
+
+```bash
+cp .env.example .env   # обязателен API_KEY
+docker compose up --build api
+```
+
+API слушает `http://localhost:3000` (`GET /api/health`, HTML на `/`). Данные — том `./data`, статика — `./public`. CLI-сводка по городам по-прежнему: `docker compose run --rm weather-digest`.
+
 ## Переменные окружения
 
 | Переменная             | Описание                                                   | По умолчанию                                  |
 | ---------------------- | ---------------------------------------------------------- | --------------------------------------------- |
 | `PORT`                 | порт API                                                   | `3000`                                        |
+| `NODE_ENV`             | `development` или `production` (в production нет стека)    | `development`                                 |
 | `API_KEY`              | секрет для POST/PATCH/DELETE. Обязателен для `npm run api` | —                                             |
 | `CORS_ORIGINS`         | origin через запятую, без `*`                              | `http://localhost:5173,http://localhost:3000` |
 | `RATE_LIMIT_WINDOW_MS` | окно лимита, мс                                            | `60000`                                       |
@@ -336,7 +375,9 @@ src/api/
 | `REQUESTS_FILE`        | хранилище заявок                                           | `./data/requests.json`                        |
 | `FORECAST_URL`         | прогноз Open-Meteo                                         | `https://api.open-meteo.com/v1/forecast`      |
 | `TIMEOUT_MS`           | таймаут исходящих запросов                                 | `5000`                                        |
+| `REQUEST_TIMEOUT_MS`   | то же, имеет приоритет над `TIMEOUT_MS`                    | —                                             |
 | `MAX_WIND_SPEED`       | порог ветра для наружных работ                             | `10`                                          |
 | `UNITS`                | `metric` (°C, мм, м/с) или `imperial` (°F, in, mph)        | `metric`                                      |
+| `LOG_LEVEL`            | уровень pino: `debug` / `info` / `warn` / `error`          | `debug` в development, `info` в production    |
 
-CLI-сводка по городам (`npm start -- --city "Москва"`) использует те же `CITY`, `DAYS`, `NO_CACHE`, `GEOCODING_URL`, `REPORTS_DIR`. Коллекции Postman — в `docs/postman/`.
+CLI-сводка по городам (`npm start -- --city "Москва"`) использует те же `CITY`, `DAYS`, `NO_CACHE`, `GEOCODING_URL`, `REPORTS_DIR`. Коллекция Postman — `docs/postman/Equipment Maintenance API.postman_collection.json`: переменные `{{baseUrl}}` и `{{apiKey}}` заданы в коллекции. Запрос Rate Limit запускать последним: pre-request делает `rateLimitBurst` вызовов `/api/health`, затем ожидается `429`.
