@@ -51,3 +51,5 @@ export const requestListQuerySchema = z.object({
   page: pageQuerySchema,
   limit: limitQuerySchema,
 });
+
+export const nestedRequestListQuerySchema = requestListQuerySchema.omit({ equipmentId: true });

@@ -49,6 +49,9 @@ export async function deleteRequest(req: Request, res: Response): Promise<void> 
 }
 
 export async function listRequestsByEquipmentId(req: Request, res: Response): Promise<void> {
-  const data = await requestService.listRequestsByEquipmentId(req.params.id as string);
-  res.status(200).json({ data });
+  const result = await requestService.listRequestsByEquipmentId(
+    req.params.id as string,
+    req.query as RequestListQuery,
+  );
+  res.status(200).json(result);
 }

@@ -82,10 +82,7 @@ function mapError(err: unknown): {
   }
 
   if (isInvalidJson(err)) {
-    const error = new ValidationError(
-      [{ field: 'body', message: 'Некорректный JSON' }],
-      'Некорректные данные запроса',
-    );
+    const error = ValidationError.malformedJson();
     return {
       status: error.status,
       code: error.code,

@@ -13,4 +13,12 @@ describe('общие ошибки API', () => {
 
     expectApiError(response, 400, 'VALIDATION_ERROR');
   });
+
+  it('возвращает 422 для невалидной схемы тела', async () => {
+    const response = await withApiKey(api().post('/api/equipment')).send({ name: 'ab' });
+    expectApiError(response, 422, 'VALIDATION_ERROR');
+    expect(response.body.error.details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: 'name' })]),
+    );
+  });
 });

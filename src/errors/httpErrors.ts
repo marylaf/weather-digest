@@ -41,8 +41,12 @@ export class NotFoundError extends HttpAppError {
 }
 
 export class ValidationError extends HttpAppError {
-  constructor(details: readonly ErrorDetail[] = [], message = 'Некорректные данные запроса') {
-    super(400, 'VALIDATION_ERROR', message, { details });
+  constructor(
+    details: readonly ErrorDetail[] = [],
+    message = 'Некорректные данные запроса',
+    status = 422,
+  ) {
+    super(status, 'VALIDATION_ERROR', message, { details });
   }
 
   static fromZod(error: ZodError): ValidationError {
@@ -51,6 +55,14 @@ export class ValidationError extends HttpAppError {
         field: formatIssuePath(issue.path),
         message: humanizeZodIssue(issue),
       })),
+    );
+  }
+
+  static malformedJson(): ValidationError {
+    return new ValidationError(
+      [{ field: 'body', message: 'Некорректный JSON' }],
+      'Некорректные данные запроса',
+      400,
     );
   }
 }
