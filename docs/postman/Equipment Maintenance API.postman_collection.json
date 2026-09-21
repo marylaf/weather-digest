@@ -1,0 +1,1030 @@
+{
+  "info": {
+    "_postman_id": "669c429a-d7ad-4d1c-8b01-e8bbc496b2d1",
+    "name": "Equipment Maintenance API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "26229025",
+    "_collection_link": "https://go.postman.co/collection/26229025-669c429a-d7ad-4d1c-8b01-e8bbc496b2d1?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is JSON\", () => {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "",
+                  "pm.test(\"Response has status\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body).to.have.property(\"status\");",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Equipment",
+      "item": [
+        {
+          "name": "Create Equipment",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set(\n  \"serialNumber\",\n  `WT-POSTMAN-${Date.now()}`\n);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();\n\nif (body.data?.id) {\n  pm.environment.set(\"equipmentId\", body.data.id);\n}\n\npm.test(\"Status code is 201\", () => {\n  pm.response.to.have.status(201);\n});\n\npm.test(\"Response contains created equipment\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"data\");\n  pm.expect(body.data).to.have.property(\"id\");\n  pm.expect(body.data.name).to.eql(\"Wind Turbine 01\");\n  pm.expect(body.data.type).to.eql(\"turbine\");\n  pm.expect(body.data.status).to.eql(\"operational\");\n});\n\npm.test(\"Location header exists\", () => {\n  pm.expect(pm.response.headers.has(\"Location\")).to.be.true;\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": true
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wind Turbine 01\",\n  \"type\": \"turbine\",\n  \"serialNumber\": \"{{serialNumber}}\",\n  \"location\": {\n    \"lat\": 55.7558,\n    \"lon\": 37.6176\n  },\n  \"status\": \"operational\",\n  \"installedAt\": \"2026-01-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Equipment List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains data array\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.be.an(\"array\");\n});\n\npm.test(\"Response contains pagination metadata\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body).to.have.property(\"meta\");\n    pm.expect(body.meta).to.have.property(\"total\");\n    pm.expect(body.meta).to.have.property(\"page\");\n    pm.expect(body.meta).to.have.property(\"limit\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Equipment By ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Correct equipment returned\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.be.an(\"object\");\n    pm.expect(body.data.id).to.eql(\n        pm.environment.get(\"equipmentId\")\n    );\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipmentId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Equipment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Equipment was updated\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.id).to.eql(\n        pm.environment.get(\"equipmentId\")\n    );\n\n    pm.expect(body.data.status).to.eql(\"maintenance\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"maintenance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipmentId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Equipment Weather",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains weather data\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body).to.have.property(\"data\");\n    pm.expect(body.data).to.have.property(\"weather\");\n    pm.expect(body.data).to.have.property(\"outdoorWorkSuitable\");\n});\n\npm.test(\"Outdoor work suitability is boolean\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.outdoorWorkSuitable).to.be.a(\"boolean\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}/weather",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipmentId}}",
+                "weather"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Equipment Requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains requests array\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.be.an(\"array\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipmentId}}",
+                "requests"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Requests",
+      "item": [
+        {
+          "name": "Create Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => {\n    pm.response.to.have.status(201);\n});\n\npm.test(\"Request was created\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.have.property(\"id\");\n    pm.expect(body.data.status).to.eql(\"new\");\n    pm.expect(body.data.equipmentId).to.eql(\n        pm.environment.get(\"equipmentId\")\n    );\n    pm.expect(body.data).to.have.property(\"createdAt\");\n    pm.expect(body.data).to.have.property(\"updatedAt\");\n});\n\npm.test(\"Location header exists\", () => {\n    pm.expect(pm.response.headers.has(\"Location\")).to.be.true;\n});\n\nconst body = pm.response.json();\n\nif (body.data?.id) {\n    pm.environment.set(\"requestId\", body.data.id);\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Inspect turbine blades\",\n  \"description\": \"Scheduled inspection\",\n  \"priority\": \"high\",\n  \"plannedAt\": \"2026-10-01T10:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains data and meta\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.be.an(\"array\");\n    pm.expect(body.meta).to.have.property(\"total\");\n    pm.expect(body.meta).to.have.property(\"page\");\n    pm.expect(body.meta).to.have.property(\"limit\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request By ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Correct request returned\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.id).to.eql(\n        pm.environment.get(\"requestId\")\n    );\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{requestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{requestId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Priority was updated\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.priority).to.eql(\"critical\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"critical\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{requestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{requestId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Status - In Progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Status changed to in_progress\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.status).to.eql(\"in_progress\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{requestId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{requestId}}",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Status - Done",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Status changed to done\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.status).to.eql(\"done\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"done\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{requestId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{requestId}}",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Negative",
+      "item": [
+        {
+          "name": "Duplicate Serial Number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", () => {\n  pm.response.to.have.status(409);\n});\n\npm.test(\"Conflict error structure is correct\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error.code).to.eql(\"CONFLICT\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate Wind Turbine\",\n  \"type\": \"turbine\",\n  \"serialNumber\": \"{{serialNumber}}\",\n  \"location\": {\n    \"lat\": 55.751,\n    \"lon\": 37.618\n  },\n  \"status\": \"operational\",\n  \"installedAt\": \"2026-01-10\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Equipment Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", () => {\n  pm.response.to.have.status(404);\n});\n\npm.test(\"Error structure is correct\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment/00000000-0000-4000-8000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "00000000-0000-4000-8000-000000000000"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Equipment Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => {\n  pm.response.to.have.status(400);\n});\n\npm.test(\"Validation error structure is correct\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"details\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"A\",\n  \"type\": \"car\",\n  \"serialNumber\": \"\",\n  \"location\": {\n    \"lat\": 200,\n    \"lon\": 300\n  },\n  \"status\": \"broken\",\n  \"installedAt\": \"2035-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Request Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is validation error\", () => {\n  pm.expect([400, 422]).to.include(pm.response.code);\n});\n\npm.test(\"Validation error has details\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"details\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"A\",\n  \"description\": \"Test\",\n  \"priority\": \"urgent\",\n  \"plannedAt\": \"not-a-date\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Request Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", () => {\n  pm.response.to.have.status(404);\n});\n\npm.test(\"Error structure is correct\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/00000000-0000-4000-8000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "00000000-0000-4000-8000-000000000000"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Unknown Equipment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", () => {\n  pm.response.to.have.status(404);\n});\n\npm.test(\"Missing equipment returns error\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"equipmentId\": \"00000000-0000-4000-8000-000000000000\",\n  \"title\": \"Inspect turbine blades\",\n  \"description\": \"Test request for missing equipment\",\n  \"priority\": \"high\",\n  \"plannedAt\": \"2026-10-01T10:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Request For Invalid Transition",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => {\n  pm.response.to.have.status(201);\n});\n\nconst body = pm.response.json();\n\nif (body.data?.id) {\n  pm.environment.set(\"invalidStatusRequestId\", body.data.id);\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Request for status test\",\n  \"description\": \"Used for invalid status transition\",\n  \"priority\": \"medium\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Status Transition",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", () => {\n  pm.response.to.have.status(409);\n});\n\npm.test(\"Invalid transition returns conflict\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error.code).to.eql(\"CONFLICT\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"done\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{invalidStatusRequestId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{invalidStatusRequestId}}",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", () => {\n  pm.response.to.have.status(204);\n});\n\npm.test(\"Response body is empty\", () => {\n  pm.expect(pm.response.text()).to.eql(\"\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{requestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{requestId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Invalid Status Request",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{invalidStatusRequestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{invalidStatusRequestId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Equipment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 204\", () => {\n  pm.response.to.have.status(204);\n});\n\npm.test(\"Response body is empty\", () => {\n  pm.expect(pm.response.text()).to.eql(\"\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "equipment",
+                "{{equipmentId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Security",
+      "item": [
+        {
+          "name": "Rate Limit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 429\", () => {\n  pm.response.to.have.status(429);\n});\n\npm.test(\"Rate limit response has error structure\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
