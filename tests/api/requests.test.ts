@@ -112,7 +112,7 @@ describe('/api/requests', () => {
       title: 'abc',
     });
 
-    expectApiError(response, 400, 'VALIDATION_ERROR');
+    expectApiError(response, 422, 'VALIDATION_ERROR');
   });
 
   it('возвращает 404 для неизвестной заявки', async () => {
@@ -202,12 +202,12 @@ describe('/api/requests', () => {
 
     it('отклоняет пустой список и слишком большой пакет', async () => {
       const empty = await withApiKey(api().post('/api/requests/import')).send({ items: [] });
-      expectApiError(empty, 400, 'VALIDATION_ERROR');
+      expectApiError(empty, 422, 'VALIDATION_ERROR');
 
       const tooMany = await withApiKey(api().post('/api/requests/import')).send({
         items: Array.from({ length: MAX_REQUEST_IMPORT_ITEMS + 1 }, () => ({})),
       });
-      expectApiError(tooMany, 400, 'VALIDATION_ERROR');
+      expectApiError(tooMany, 422, 'VALIDATION_ERROR');
     });
   });
 });

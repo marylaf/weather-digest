@@ -17,6 +17,7 @@ import {
   equipmentWeatherParamsSchema,
   updateEquipmentBodySchema,
 } from '../validators/equipment.js';
+import { nestedRequestListQuerySchema } from '../validators/request.js';
 
 const equipmentRouter = Router();
 
@@ -32,7 +33,7 @@ equipmentRouter.post(
 );
 equipmentRouter.get(
   '/:id/requests',
-  validate({ params: equipmentIdParamsSchema }),
+  validate({ params: equipmentIdParamsSchema, query: nestedRequestListQuerySchema }),
   asyncHandler(listRequestsByEquipmentId),
 );
 equipmentRouter.get(

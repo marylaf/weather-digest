@@ -79,7 +79,7 @@ describe('/api/equipment', () => {
       name: 'ab',
     });
 
-    expectApiError(response, 400, 'VALIDATION_ERROR');
+    expectApiError(response, 422, 'VALIDATION_ERROR');
     expect(response.body.error.details).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -110,6 +110,7 @@ describe('/api/equipment', () => {
     const requestItem = await createRequest(equipment.id, { title: 'Check inverter fans' });
 
     const response = await api().get(`/api/equipment/${equipment.id}/requests`).expect(200);
+    expect(response.body.meta).toEqual({ total: 1, page: 1, limit: 10 });
     expect(response.body.data).toEqual([expect.objectContaining({ id: requestItem.id })]);
   });
 

@@ -2,7 +2,23 @@ services:
   weather-digest:
     build: .
     image: weather-digest:local
+    command: ['node', 'dist/index.js']
     env_file:
       - .env
     volumes:
       - ./reports:/app/reports
+
+  api:
+    build: .
+    image: weather-digest:local
+    command: ['node', 'dist/api/server.js']
+    ports:
+      - '${PORT:-3000}:${PORT:-3000}'
+    env_file:
+      - .env
+    environment:
+      EQUIPMENT_FILE: /app/data/equipment.json
+      REQUESTS_FILE: /app/data/requests.json
+    volumes:
+      - ./data:/app/data
+      - ./public:/app/public

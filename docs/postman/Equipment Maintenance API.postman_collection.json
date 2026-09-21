@@ -42,13 +42,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "health"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
             }
           },
           "response": []
@@ -66,7 +61,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.environment.set(\n  \"serialNumber\",\n  `WT-POSTMAN-${Date.now()}`\n);"
+                  "pm.collectionVariables.set(",
+                  "  \"serialNumber\",",
+                  "  `WT-POSTMAN-${Date.now()}`",
+                  ");"
                 ]
               }
             },
@@ -75,7 +73,29 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const body = pm.response.json();\n\nif (body.data?.id) {\n  pm.environment.set(\"equipmentId\", body.data.id);\n}\n\npm.test(\"Status code is 201\", () => {\n  pm.response.to.have.status(201);\n});\n\npm.test(\"Response contains created equipment\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"data\");\n  pm.expect(body.data).to.have.property(\"id\");\n  pm.expect(body.data.name).to.eql(\"Wind Turbine 01\");\n  pm.expect(body.data.type).to.eql(\"turbine\");\n  pm.expect(body.data.status).to.eql(\"operational\");\n});\n\npm.test(\"Location header exists\", () => {\n  pm.expect(pm.response.headers.has(\"Location\")).to.be.true;\n});"
+                  "const body = pm.response.json();",
+                  "",
+                  "if (body.data?.id) {",
+                  "  pm.collectionVariables.set(\"equipmentId\", body.data.id);",
+                  "}",
+                  "",
+                  "pm.test(\"Status code is 201\", () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains created equipment\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"data\");",
+                  "  pm.expect(body.data).to.have.property(\"id\");",
+                  "  pm.expect(body.data.name).to.eql(\"Wind Turbine 01\");",
+                  "  pm.expect(body.data.type).to.eql(\"turbine\");",
+                  "  pm.expect(body.data.status).to.eql(\"operational\");",
+                  "});",
+                  "",
+                  "pm.test(\"Location header exists\", () => {",
+                  "  pm.expect(pm.response.headers.has(\"Location\")).to.be.true;",
+                  "});"
                 ]
               }
             }
@@ -104,13 +124,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"]
             }
           },
           "response": []
@@ -123,7 +138,24 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains data array\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.be.an(\"array\");\n});\n\npm.test(\"Response contains pagination metadata\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body).to.have.property(\"meta\");\n    pm.expect(body.meta).to.have.property(\"total\");\n    pm.expect(body.meta).to.have.property(\"page\");\n    pm.expect(body.meta).to.have.property(\"limit\");\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains data array\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data).to.be.an(\"array\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains pagination metadata\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body).to.have.property(\"meta\");",
+                  "    pm.expect(body.meta).to.have.property(\"total\");",
+                  "    pm.expect(body.meta).to.have.property(\"page\");",
+                  "    pm.expect(body.meta).to.have.property(\"limit\");",
+                  "});"
                 ]
               }
             }
@@ -133,13 +165,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment?page=1&limit=10",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"],
               "query": [
                 {
                   "key": "page",
@@ -162,7 +189,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Correct equipment returned\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.be.an(\"object\");\n    pm.expect(body.data.id).to.eql(\n        pm.environment.get(\"equipmentId\")\n    );\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Correct equipment returned\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data).to.be.an(\"object\");",
+                  "    pm.expect(body.data.id).to.eql(",
+                  "        pm.collectionVariables.get(\"equipmentId\")",
+                  "    );",
+                  "});"
                 ]
               }
             }
@@ -172,14 +210,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}"]
             }
           },
           "response": []
@@ -192,7 +224,19 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Equipment was updated\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.id).to.eql(\n        pm.environment.get(\"equipmentId\")\n    );\n\n    pm.expect(body.data.status).to.eql(\"maintenance\");\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Equipment was updated\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data.id).to.eql(",
+                  "        pm.collectionVariables.get(\"equipmentId\")",
+                  "    );",
+                  "",
+                  "    pm.expect(body.data.status).to.eql(\"maintenance\");",
+                  "});"
                 ]
               }
             }
@@ -216,14 +260,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}"]
             }
           },
           "response": []
@@ -236,7 +274,23 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains weather data\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body).to.have.property(\"data\");\n    pm.expect(body.data).to.have.property(\"weather\");\n    pm.expect(body.data).to.have.property(\"outdoorWorkSuitable\");\n});\n\npm.test(\"Outdoor work suitability is boolean\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.outdoorWorkSuitable).to.be.a(\"boolean\");\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains weather data\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body).to.have.property(\"data\");",
+                  "    pm.expect(body.data).to.have.property(\"weather\");",
+                  "    pm.expect(body.data).to.have.property(\"outdoorWorkSuitable\");",
+                  "});",
+                  "",
+                  "pm.test(\"Outdoor work suitability is boolean\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data.outdoorWorkSuitable).to.be.a(\"boolean\");",
+                  "});"
                 ]
               }
             }
@@ -246,15 +300,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}/weather",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}",
-                "weather"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}", "weather"]
             }
           },
           "response": []
@@ -267,7 +314,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains requests array\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.be.an(\"array\");\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains data and meta\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data).to.be.an(\"array\");",
+                  "    pm.expect(body.meta).to.have.property(\"total\");",
+                  "    pm.expect(body.meta).to.have.property(\"page\");",
+                  "    pm.expect(body.meta).to.have.property(\"limit\");",
+                  "});"
                 ]
               }
             }
@@ -276,15 +334,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}",
-                "requests"
+              "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}/requests?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}", "requests"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
             }
           },
@@ -303,7 +364,31 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 201\", () => {\n    pm.response.to.have.status(201);\n});\n\npm.test(\"Request was created\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.have.property(\"id\");\n    pm.expect(body.data.status).to.eql(\"new\");\n    pm.expect(body.data.equipmentId).to.eql(\n        pm.environment.get(\"equipmentId\")\n    );\n    pm.expect(body.data).to.have.property(\"createdAt\");\n    pm.expect(body.data).to.have.property(\"updatedAt\");\n});\n\npm.test(\"Location header exists\", () => {\n    pm.expect(pm.response.headers.has(\"Location\")).to.be.true;\n});\n\nconst body = pm.response.json();\n\nif (body.data?.id) {\n    pm.environment.set(\"requestId\", body.data.id);\n}"
+                  "pm.test(\"Status code is 201\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Request was created\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data).to.have.property(\"id\");",
+                  "    pm.expect(body.data.status).to.eql(\"new\");",
+                  "    pm.expect(body.data.equipmentId).to.eql(",
+                  "        pm.collectionVariables.get(\"equipmentId\")",
+                  "    );",
+                  "    pm.expect(body.data).to.have.property(\"createdAt\");",
+                  "    pm.expect(body.data).to.have.property(\"updatedAt\");",
+                  "});",
+                  "",
+                  "pm.test(\"Location header exists\", () => {",
+                  "    pm.expect(pm.response.headers.has(\"Location\")).to.be.true;",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "if (body.data?.id) {",
+                  "    pm.collectionVariables.set(\"requestId\", body.data.id);",
+                  "}"
                 ]
               }
             }
@@ -327,13 +412,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             }
           },
           "response": []
@@ -346,7 +426,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Response contains data and meta\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data).to.be.an(\"array\");\n    pm.expect(body.meta).to.have.property(\"total\");\n    pm.expect(body.meta).to.have.property(\"page\");\n    pm.expect(body.meta).to.have.property(\"limit\");\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains data and meta\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data).to.be.an(\"array\");",
+                  "    pm.expect(body.meta).to.have.property(\"total\");",
+                  "    pm.expect(body.meta).to.have.property(\"page\");",
+                  "    pm.expect(body.meta).to.have.property(\"limit\");",
+                  "});"
                 ]
               }
             }
@@ -356,13 +447,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/requests?page=1&limit=10",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"],
               "query": [
                 {
                   "key": "page",
@@ -385,7 +471,17 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Correct request returned\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.id).to.eql(\n        pm.environment.get(\"requestId\")\n    );\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Correct request returned\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data.id).to.eql(",
+                  "        pm.collectionVariables.get(\"requestId\")",
+                  "    );",
+                  "});"
                 ]
               }
             }
@@ -395,14 +491,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}"]
             }
           },
           "response": []
@@ -415,7 +505,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Priority was updated\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.priority).to.eql(\"critical\");\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Priority was updated\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data.priority).to.eql(\"critical\");",
+                  "});"
                 ]
               }
             }
@@ -439,14 +537,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}"]
             }
           },
           "response": []
@@ -459,7 +551,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Status changed to in_progress\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.status).to.eql(\"in_progress\");\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Status changed to in_progress\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data.status).to.eql(\"in_progress\");",
+                  "});"
                 ]
               }
             }
@@ -483,15 +583,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "status"]
             }
           },
           "response": []
@@ -504,7 +597,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 200\", () => {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Status changed to done\", () => {\n    const body = pm.response.json();\n\n    pm.expect(body.data.status).to.eql(\"done\");\n});"
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Status changed to done\", () => {",
+                  "    const body = pm.response.json();",
+                  "",
+                  "    pm.expect(body.data.status).to.eql(\"done\");",
+                  "});"
                 ]
               }
             }
@@ -528,15 +629,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "status"]
             }
           },
           "response": []
@@ -554,7 +648,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 409\", () => {\n  pm.response.to.have.status(409);\n});\n\npm.test(\"Conflict error structure is correct\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error.code).to.eql(\"CONFLICT\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                  "pm.test(\"Status code is 409\", () => {",
+                  "  pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Conflict error structure is correct\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error.code).to.eql(\"CONFLICT\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "});"
                 ]
               }
             },
@@ -562,9 +667,7 @@
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
+                "exec": [""]
               }
             }
           ],
@@ -591,13 +694,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"],
               "query": [
                 {
                   "key": "",
@@ -622,7 +720,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 404\", () => {\n  pm.response.to.have.status(404);\n});\n\npm.test(\"Error structure is correct\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                  "pm.test(\"Status code is 404\", () => {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error structure is correct\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error).to.have.property(\"code\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "});"
                 ]
               }
             }
@@ -632,14 +741,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/00000000-0000-4000-8000-000000000000",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "00000000-0000-4000-8000-000000000000"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "00000000-0000-4000-8000-000000000000"]
             }
           },
           "response": []
@@ -652,7 +755,21 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 400\", () => {\n  pm.response.to.have.status(400);\n});\n\npm.test(\"Validation error structure is correct\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"details\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                  "pm.test(\"Status code is 422\", () => {",
+                  "  pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test(\"Error structure is correct\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error).to.have.property(\"code\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "  pm.expect(body.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "  pm.expect(body.error).to.have.property(\"details\");",
+                  "  pm.expect(body.error.details).to.be.an(\"array\").that.is.not.empty;",
+                  "});"
                 ]
               }
             }
@@ -676,13 +793,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"]
             }
           },
           "response": []
@@ -695,7 +807,21 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is validation error\", () => {\n  pm.expect([400, 422]).to.include(pm.response.code);\n});\n\npm.test(\"Validation error has details\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"details\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                  "pm.test(\"Status code is 422\", () => {",
+                  "  pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test(\"Error structure is correct\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error).to.have.property(\"code\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "  pm.expect(body.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "  pm.expect(body.error).to.have.property(\"details\");",
+                  "  pm.expect(body.error.details).to.be.an(\"array\").that.is.not.empty;",
+                  "});"
                 ]
               }
             }
@@ -719,13 +845,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             }
           },
           "response": []
@@ -738,7 +859,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 404\", () => {\n  pm.response.to.have.status(404);\n});\n\npm.test(\"Error structure is correct\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                  "pm.test(\"Status code is 404\", () => {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Error structure is correct\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error).to.have.property(\"code\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "});"
                 ]
               }
             }
@@ -748,14 +880,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/requests/00000000-0000-4000-8000-000000000000",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "00000000-0000-4000-8000-000000000000"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "00000000-0000-4000-8000-000000000000"]
             }
           },
           "response": []
@@ -768,7 +894,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 404\", () => {\n  pm.response.to.have.status(404);\n});\n\npm.test(\"Missing equipment returns error\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                  "pm.test(\"Status code is 404\", () => {",
+                  "  pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Missing equipment returns error\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error).to.have.property(\"code\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "});"
                 ]
               }
             }
@@ -792,13 +929,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             }
           },
           "response": []
@@ -811,7 +943,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 201\", () => {\n  pm.response.to.have.status(201);\n});\n\nconst body = pm.response.json();\n\nif (body.data?.id) {\n  pm.environment.set(\"invalidStatusRequestId\", body.data.id);\n}"
+                  "pm.test(\"Status code is 201\", () => {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "",
+                  "if (body.data?.id) {",
+                  "  pm.collectionVariables.set(\"invalidStatusRequestId\", body.data.id);",
+                  "}"
                 ]
               }
             }
@@ -835,13 +975,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             }
           },
           "response": []
@@ -854,7 +989,18 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 409\", () => {\n  pm.response.to.have.status(409);\n});\n\npm.test(\"Invalid transition returns conflict\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error.code).to.eql(\"CONFLICT\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                  "pm.test(\"Status code is 409\", () => {",
+                  "  pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Invalid transition returns conflict\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error.code).to.eql(\"CONFLICT\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "});"
                 ]
               }
             }
@@ -878,15 +1024,104 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{invalidStatusRequestId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{invalidStatusRequestId}}",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{invalidStatusRequestId}}", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Malformed JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400\", () => {",
+                  "  pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error structure is correct\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error).to.have.property(\"code\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "  pm.expect(body.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "  pm.expect(body.error).to.have.property(\"details\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Equipment With Open Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", () => {",
+                  "  pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Error structure is correct\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error).to.have.property(\"code\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "  pm.expect(body.error.code).to.eql(\"CONFLICT\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}"]
             }
           },
           "response": []
@@ -904,7 +1139,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 204\", () => {\n  pm.response.to.have.status(204);\n});\n\npm.test(\"Response body is empty\", () => {\n  pm.expect(pm.response.text()).to.eql(\"\");\n});"
+                  "pm.test(\"Status code is 204\", () => {",
+                  "  pm.response.to.have.status(204);",
+                  "});",
+                  "",
+                  "pm.test(\"Response body is empty\", () => {",
+                  "  pm.expect(pm.response.text()).to.eql(\"\");",
+                  "});"
                 ]
               }
             }
@@ -919,14 +1160,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}"]
             }
           },
           "response": []
@@ -943,14 +1178,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{invalidStatusRequestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{invalidStatusRequestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{invalidStatusRequestId}}"]
             }
           },
           "response": []
@@ -963,7 +1192,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 204\", () => {\n  pm.response.to.have.status(204);\n});\n\npm.test(\"Response body is empty\", () => {\n  pm.expect(pm.response.text()).to.eql(\"\");\n});"
+                  "pm.test(\"Status code is 204\", () => {",
+                  "  pm.response.to.have.status(204);",
+                  "});",
+                  "",
+                  "pm.test(\"Response body is empty\", () => {",
+                  "  pm.expect(pm.response.text()).to.eql(\"\");",
+                  "});"
                 ]
               }
             }
@@ -978,14 +1213,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}"]
             }
           },
           "response": []
@@ -1003,7 +1232,43 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 429\", () => {\n  pm.response.to.have.status(429);\n});\n\npm.test(\"Rate limit response has error structure\", () => {\n  const body = pm.response.json();\n\n  pm.expect(body).to.have.property(\"error\");\n  pm.expect(body.error).to.have.property(\"code\");\n  pm.expect(body.error).to.have.property(\"message\");\n  pm.expect(body.error).to.have.property(\"requestId\");\n});"
+                  "pm.test(\"Status code is 429\", () => {",
+                  "  pm.response.to.have.status(429);",
+                  "});",
+                  "",
+                  "pm.test(\"Rate limit response has error structure\", () => {",
+                  "  const body = pm.response.json();",
+                  "",
+                  "  pm.expect(body).to.have.property(\"error\");",
+                  "  pm.expect(body.error.code).to.eql(\"RATE_LIMIT_EXCEEDED\");",
+                  "  pm.expect(body.error).to.have.property(\"message\");",
+                  "  pm.expect(body.error).to.have.property(\"requestId\");",
+                  "});",
+                  "",
+                  "pm.test(\"Rate limit headers are present\", () => {",
+                  "  const names = pm.response.headers.all().map((header) => header.key.toLowerCase());",
+                  "  const hasLimit = names.some((name) => name === \"ratelimit\" || name === \"ratelimit-limit\" || name === \"ratelimit-policy\");",
+                  "  pm.expect(hasLimit).to.be.true;",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const baseUrl = pm.collectionVariables.get(\"baseUrl\") || \"http://localhost:3000\";",
+                  "const burst = Number(pm.collectionVariables.get(\"rateLimitBurst\") || 110);",
+                  "",
+                  "for (let i = 0; i < burst; i += 1) {",
+                  "  await new Promise((resolve) => {",
+                  "    pm.sendRequest(",
+                  "      { url: `${baseUrl}/api/health`, method: \"GET\" },",
+                  "      () => resolve()",
+                  "    );",
+                  "  });",
+                  "}"
                 ]
               }
             }
@@ -1013,18 +1278,44 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "health"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
             }
           },
           "response": []
         }
-      ]
+      ],
+      "description": "Запускать последней группой. Pre-request делает {{rateLimitBurst}} вызовов /api/health, затем сам запрос должен получить 429. При RATE_LIMIT_MAX=1 достаточно burst=2."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "apiKey",
+      "value": "secret_for_all_pepes"
+    },
+    {
+      "key": "rateLimitBurst",
+      "value": "110"
+    },
+    {
+      "key": "serialNumber",
+      "value": ""
+    },
+    {
+      "key": "equipmentId",
+      "value": ""
+    },
+    {
+      "key": "requestId",
+      "value": ""
+    },
+    {
+      "key": "invalidStatusRequestId",
+      "value": ""
     }
   ]
 }

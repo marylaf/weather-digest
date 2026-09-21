@@ -137,9 +137,10 @@ export async function listRequests(query: RequestListQuery): Promise<RequestList
 
 export async function listRequestsByEquipmentId(
   equipmentId: string,
-): Promise<MaintenanceRequest[]> {
+  query: RequestListQuery = {},
+): Promise<RequestListResult> {
   await assertEquipmentExists(equipmentId);
-  return requestRepository.findByEquipmentId(equipmentId);
+  return listRequests({ ...query, equipmentId });
 }
 
 export async function updateRequest(
