@@ -10,17 +10,21 @@ FROM node:20-alpine
 WORKDIR /app
 
 ENV NODE_ENV=production \
-    REPORTS_DIR=/app/reports
+    REPORTS_DIR=/app/reports \
+    EQUIPMENT_FILE=/app/data/equipment.json \
+    REQUESTS_FILE=/app/data/requests.json
 
 RUN addgroup -S app \
-    && adduser -S app -G app \
-    && mkdir -p /app/reports \
+    && adduser -S app -G app
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev \
+    && mkdir -p /app/reports /app/data /app/public \
     && chown -R app:app /app
 
-COPY --from=build --chown=app:app /app/package.json ./
-COPY --from=build --chown=app:app /app/node_modules/dotenv ./node_modules/dotenv
 COPY --from=build --chown=app:app /app/dist ./dist
+COPY --chown=app:app public ./public
 
 USER app
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/api/server.js"]
