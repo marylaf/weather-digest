@@ -1,4 +1,7 @@
 import { jest } from '@jest/globals';
+import { EquipmentPassport } from '../../src/db/models/equipmentPassport.js';
+import { initModels } from '../../src/db/models/index.js';
+import { getSequelize } from '../../src/db/database.js';
 import { equipmentPayload, forecastApiResponse } from '../helpers/fixtures.js';
 import {
   api,
@@ -23,6 +26,7 @@ describe('/api/equipment', () => {
     expect(created.body.data).toMatchObject({
       ...payload,
       id: expect.any(String),
+      passport: null,
     });
 
     const fetched = await api().get(`/api/equipment/${created.body.data.id}`).expect(200);
@@ -103,6 +107,76 @@ describe('/api/equipment', () => {
   it('возвращает 404 для неизвестного id', async () => {
     const response = await api().get('/api/equipment/missing-id');
     expectApiError(response, 404, 'NOT_FOUND');
+  });
+
+  it('сортирует список по whitelist-полю и фильтрует дату установки в БД', async () => {
+    await createEquipment({ name: 'Zulu sensor', type: 'sensor', installedAt: '2020-01-15' });
+    await createEquipment({ name: 'Alpha turbine', installedAt: '2024-06-01' });
+
+    const sorted = await api()
+      .get('/api/equipment')
+      .query({ sortBy: 'name', order: 'asc', limit: '10' })
+      .expect(200);
+
+    expect(sorted.body.data.map((item: { name: string }) => item.name)).toEqual([
+      'Alpha turbine',
+      'Zulu sensor',
+    ]);
+
+    const filtered = await api()
+      .get('/api/equipment')
+      .query({ installedFrom: '2023-01-01', sortBy: 'installedAt', order: 'asc' })
+      .expect(200);
+
+    expect(filtered.body.meta.total).toBe(1);
+    expect(filtered.body.data[0]).toMatchObject({
+      name: 'Alpha turbine',
+      installedAt: '2024-06-01',
+    });
+  });
+
+  it('добавляет паспорт в карточку и сохраняет прежние поля', async () => {
+    const equipment = await createEquipment({ name: 'Passport turbine' });
+    initModels(getSequelize());
+    await EquipmentPassport.create({
+      equipmentId: equipment.id,
+      manufacturer: 'Vestas',
+      model: 'V150',
+      nominalPower: '4200.00',
+      lastVerificationDate: '2026-03-01',
+    });
+
+    const response = await api().get(`/api/equipment/${equipment.id}`).expect(200);
+
+    expect(response.body.data).toMatchObject({
+      id: equipment.id,
+      name: 'Passport turbine',
+      type: equipment.type,
+      serialNumber: equipment.serialNumber,
+      location: equipment.location,
+      status: equipment.status,
+      installedAt: equipment.installedAt,
+    });
+    expect(response.body.data.passport).toEqual({
+      id: expect.any(String),
+      manufacturer: 'Vestas',
+      model: 'V150',
+      nominalPower: '4200.00',
+      lastVerificationDate: '2026-03-01',
+    });
+  });
+
+  it('удаляет оборудование, если остались только закрытые заявки', async () => {
+    const equipment = await createEquipment();
+    const requestItem = await createRequest(equipment.id);
+
+    await withApiKey(api().patch(`/api/requests/${requestItem.id}/status`))
+      .send({ status: 'rejected' })
+      .expect(200);
+    await withApiKey(api().delete(`/api/equipment/${equipment.id}`)).expect(204);
+
+    const missing = await api().get(`/api/equipment/${equipment.id}`);
+    expectApiError(missing, 404, 'NOT_FOUND');
   });
 
   it('возвращает заявки по оборудованию', async () => {
