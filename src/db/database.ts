@@ -1,5 +1,6 @@
 import { Sequelize } from 'sequelize';
 import { logger } from '../logger.js';
+import { initModels } from './models/index.js';
 
 const DEFAULT_POOL_MAX = 5;
 const DEFAULT_POOL_MIN = 0;
@@ -63,6 +64,8 @@ export async function connectDatabase(): Promise<void> {
       { cause: error },
     );
   }
+
+  initModels(db);
 
   logger.info(
     { host: config.host, port: config.port, database: config.name },
