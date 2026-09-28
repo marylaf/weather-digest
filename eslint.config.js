@@ -34,5 +34,15 @@ export default defineConfig(
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/db/**/*.cjs', '.sequelizerc'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: globals.node,
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
   eslintConfigPrettier,
 );
