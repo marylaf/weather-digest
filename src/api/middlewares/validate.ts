@@ -33,11 +33,23 @@ export function validate(schemas: ValidationSchemas): RequestHandler {
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
-        next(ValidationError.fromZod(error));
+        next(ValidationError.fromZod(error, isPaginationError(error) ? 400 : 422));
         return;
       }
 
       next(error);
     }
   };
+}
+
+const PAGINATION_FIELDS = new Set(['page', 'limit']);
+
+function isPaginationError(error: z.ZodError): boolean {
+  return (
+    error.issues.length > 0 &&
+    error.issues.every((issue) => {
+      const field = issue.path[0];
+      return typeof field === 'string' && PAGINATION_FIELDS.has(field);
+    })
+  );
 }

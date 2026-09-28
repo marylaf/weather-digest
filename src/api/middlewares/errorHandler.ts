@@ -6,6 +6,7 @@ import {
   NetworkError,
   TimeoutError,
 } from '../../errors/appError.js';
+import { mapDatabaseError } from '../../errors/databaseErrors.js';
 import {
   ExternalServiceError,
   HttpAppError,
@@ -68,6 +69,18 @@ function mapError(err: unknown): {
       message: err.message,
       details: err.details,
       logMessage: err.message,
+    };
+  }
+
+  const databaseError = mapDatabaseError(err);
+
+  if (databaseError) {
+    return {
+      status: databaseError.status,
+      code: databaseError.code,
+      message: databaseError.message,
+      details: databaseError.details,
+      logMessage: err instanceof Error ? err.message : databaseError.message,
     };
   }
 
