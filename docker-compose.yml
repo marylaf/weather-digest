@@ -19,7 +19,6 @@ services:
     environment:
       EQUIPMENT_FILE: /app/data/equipment.json
       REQUESTS_FILE: /app/data/requests.json
-      # В сети Compose Postgres слушает 5432. DB_PORT из .env — порт на хосте.
       DB_HOST: postgres
       DB_PORT: '5432'
     depends_on:

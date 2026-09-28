@@ -20,10 +20,6 @@ export interface DatabaseConfig {
 
 let sequelize: Sequelize | undefined;
 
-/**
- * Returns the process-wide Sequelize instance.
- * The instance is created on first use and then reused.
- */
 export function getSequelize(): Sequelize {
   if (!sequelize) {
     const config = loadDatabaseConfig();
@@ -54,7 +50,6 @@ export function loadDatabaseConfig(): DatabaseConfig {
   };
 }
 
-/** Opens the shared connection. Does not create or alter schema. */
 export async function connectDatabase(): Promise<void> {
   const config = loadDatabaseConfig();
   const db = getSequelize();
@@ -75,7 +70,6 @@ export async function connectDatabase(): Promise<void> {
   );
 }
 
-/** Closes the shared connection. Safe to call when it was never opened. */
 export async function closeDatabase(): Promise<void> {
   if (!sequelize) {
     return;

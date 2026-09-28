@@ -25,7 +25,6 @@ function readPort(name) {
   return port;
 }
 
-/** @type {import('sequelize').Options} */
 const config = {
   username: readRequired('DB_USER'),
   password: readRequired('DB_PASSWORD'),
