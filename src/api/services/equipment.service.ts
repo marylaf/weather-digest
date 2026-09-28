@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { loadConfig } from '../../config/appConfig.js';
-import { DEFAULT_DAYS, DEFAULT_LIMIT, DEFAULT_PAGE } from '../../config/constants.js';
+import { DEFAULT_DAYS } from '../../config/constants.js';
 import {
   HttpStatusError,
   InvalidApiResponseError,
@@ -15,16 +15,11 @@ import type {
   Equipment,
   EquipmentListQuery,
   EquipmentListResult,
-  EquipmentSortField,
-  SortOrder,
   UpdateEquipmentInput,
 } from '../../types/equipment.js';
 import type { EquipmentWeather } from '../../types/weather.js';
 import * as equipmentRepository from '../repositories/equipment.repository.js';
 import * as requestService from './request.service.js';
-
-const DEFAULT_SORT_BY: EquipmentSortField = 'name';
-const DEFAULT_ORDER: SortOrder = 'asc';
 
 export async function createEquipment(payload: CreateEquipmentInput): Promise<Equipment> {
   await assertSerialNumberAvailable(payload.serialNumber);
@@ -37,6 +32,7 @@ export async function createEquipment(payload: CreateEquipmentInput): Promise<Eq
     location: payload.location,
     status: payload.status,
     installedAt: payload.installedAt,
+    passport: null,
   };
 
   return equipmentRepository.create(equipment);
@@ -74,23 +70,11 @@ export async function getEquipmentWeather(id: string): Promise<EquipmentWeather>
 
 /**
  * Query params: status, type, installedFrom, installedTo, sortBy, order, page, limit.
+ * Filtering, sorting and pagination run in PostgreSQL.
  * sortBy whitelist: name, type, status, serialNumber, installedAt.
  */
 export async function listEquipment(query: EquipmentListQuery): Promise<EquipmentListResult> {
-  const items = await equipmentRepository.findAll();
-  const filtered = items.filter((item) => matchesFilters(item, query));
-  const total = filtered.length;
-  const sortBy = query.sortBy ?? DEFAULT_SORT_BY;
-  const order = query.order ?? DEFAULT_ORDER;
-  const sorted = [...filtered].sort((left, right) => compareEquipment(left, right, sortBy, order));
-  const page = query.page ?? DEFAULT_PAGE;
-  const limit = query.limit ?? DEFAULT_LIMIT;
-  const start = (page - 1) * limit;
-
-  return {
-    data: sorted.slice(start, start + limit),
-    meta: { total, page, limit },
-  };
+  return equipmentRepository.list(query);
 }
 
 export async function updateEquipment(
@@ -138,58 +122,6 @@ async function assertSerialNumberAvailable(serialNumber: string): Promise<void> 
   if (existing !== null) {
     throw new ConflictError('Equipment with this serialNumber already exists');
   }
-}
-
-function matchesFilters(item: Equipment, query: EquipmentListQuery): boolean {
-  if (query.status !== undefined && item.status !== query.status) {
-    return false;
-  }
-
-  if (query.type !== undefined && item.type !== query.type) {
-    return false;
-  }
-
-  const installedAt = toDateOnly(item.installedAt);
-
-  if (query.installedFrom !== undefined) {
-    const from = toDateOnly(query.installedFrom);
-    if (from !== null && (installedAt === null || installedAt < from)) {
-      return false;
-    }
-  }
-
-  if (query.installedTo !== undefined) {
-    const to = toDateOnly(query.installedTo);
-    if (to !== null && (installedAt === null || installedAt > to)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function compareEquipment(
-  left: Equipment,
-  right: Equipment,
-  sortBy: EquipmentSortField,
-  order: SortOrder,
-): number {
-  const result = left[sortBy].localeCompare(right[sortBy], 'en', {
-    numeric: true,
-    sensitivity: 'base',
-  });
-  const directed = order === 'asc' ? result : -result;
-  return directed !== 0 ? directed : left.id.localeCompare(right.id);
-}
-
-function toDateOnly(value: string): string | null {
-  const timestamp = Date.parse(value);
-
-  if (Number.isNaN(timestamp)) {
-    return null;
-  }
-
-  return new Date(timestamp).toISOString().slice(0, 10);
 }
 
 function mapWeatherError(error: unknown): ExternalServiceError {

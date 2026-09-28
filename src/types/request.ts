@@ -19,6 +19,15 @@ export const REQUEST_SORT_FIELDS = [
 ] as const;
 export type RequestSortField = (typeof REQUEST_SORT_FIELDS)[number];
 
+export interface AssignedTechnician {
+  id: string;
+  fullName: string;
+  specialization: string;
+  employeeNumber: string;
+  role: 'lead' | 'member';
+  hours: string;
+}
+
 export interface MaintenanceRequest {
   id: string;
   equipmentId: string;
@@ -29,6 +38,8 @@ export interface MaintenanceRequest {
   plannedAt?: string;
   createdAt: string;
   updatedAt: string;
+  /** Present on a single request. List payloads keep the previous shape. */
+  assignedTechnicians?: AssignedTechnician[];
 }
 
 export interface CreateRequestInput {
