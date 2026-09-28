@@ -49,12 +49,14 @@ export class ValidationError extends HttpAppError {
     super(status, 'VALIDATION_ERROR', message, { details });
   }
 
-  static fromZod(error: ZodError): ValidationError {
+  static fromZod(error: ZodError, status = 422): ValidationError {
     return new ValidationError(
       error.issues.map((issue) => ({
         field: formatIssuePath(issue.path),
         message: humanizeZodIssue(issue),
       })),
+      'Некорректные данные запроса',
+      status,
     );
   }
 

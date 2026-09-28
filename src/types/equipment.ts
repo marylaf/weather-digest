@@ -26,6 +26,14 @@ export interface GeoLocation {
   lon: number;
 }
 
+export interface EquipmentPassportSummary {
+  id: string;
+  manufacturer: string;
+  model: string;
+  nominalPower: string | null;
+  lastVerificationDate: string | null;
+}
+
 export interface Equipment {
   id: string;
   name: string;
@@ -34,6 +42,7 @@ export interface Equipment {
   location: GeoLocation;
   status: EquipmentStatus;
   installedAt: string;
+  passport: EquipmentPassportSummary | null;
 }
 
 export interface CreateEquipmentInput {

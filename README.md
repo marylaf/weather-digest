@@ -2,7 +2,7 @@
 
 REST API для учёта оборудования ветро- и солнечной генерации и заявок на обслуживание. По координатам оборудования запрашивается прогноз Open-Meteo: можно понять, подходят ли ближайшие сутки для наружных работ (нет осадков и ветер ниже порога).
 
-Данные хранятся в JSON-файлах (`EQUIPMENT_FILE`, `REQUESTS_FILE`). Изменяющие запросы (`POST`, `PATCH`, `DELETE`) требуют ключ в `X-API-Key` или `Authorization: Bearer <ключ>`. GET открыт.
+Данные оборудования и заявок хранятся в PostgreSQL (Sequelize). `EQUIPMENT_FILE` и `REQUESTS_FILE` нужны только сидеру импорта старых JSON. Изменяющие запросы (`POST`, `PATCH`, `DELETE`) требуют ключ в `X-API-Key` или `Authorization: Bearer <ключ>`. GET открыт.
 
 Базовый URL: `http://localhost:3000/api`.
 
@@ -317,10 +317,11 @@ src/api/
 ├── services/                 # правила: уникальность, статусы, погода
 │   ├── equipment.service.ts
 │   └── request.service.ts
-├── repositories/             # JSON-файлы
+├── repositories/             # PostgreSQL через Sequelize
 │   ├── equipment.repository.ts
 │   ├── request.repository.ts
-│   └── jsonFile.ts
+│   ├── listQuery.ts
+│   └── db.ts
 ├── validators/               # схемы Zod
 │   ├── equipment.ts
 │   ├── request.ts
@@ -371,8 +372,8 @@ API слушает `http://localhost:3000` (`GET /api/health`, HTML на `/`). �
 | `RATE_LIMIT_WINDOW_MS` | окно лимита, мс                                            | `60000`                                       |
 | `RATE_LIMIT_MAX`       | запросов на IP за окно                                     | `100`                                         |
 | `JSON_BODY_LIMIT`      | максимум JSON body                                         | `100kb`                                       |
-| `EQUIPMENT_FILE`       | хранилище оборудования                                     | `./data/equipment.json`                       |
-| `REQUESTS_FILE`        | хранилище заявок                                           | `./data/requests.json`                        |
+| `EQUIPMENT_FILE`       | JSON для сидера импорта, не для runtime API                | `./data/equipment.json`                       |
+| `REQUESTS_FILE`        | JSON для сидера импорта, не для runtime API                | `./data/requests.json`                        |
 | `FORECAST_URL`         | прогноз Open-Meteo                                         | `https://api.open-meteo.com/v1/forecast`      |
 | `TIMEOUT_MS`           | таймаут исходящих запросов                                 | `5000`                                        |
 | `REQUEST_TIMEOUT_MS`   | то же, имеет приоритет над `TIMEOUT_MS`                    | —                                             |

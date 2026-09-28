@@ -1,4 +1,6 @@
 import { MAX_REQUEST_IMPORT_ITEMS } from '../../src/config/constants.js';
+import { getSequelize } from '../../src/db/database.js';
+import { initModels, RequestAssignee, Technician } from '../../src/db/models/index.js';
 import { requestPayload } from '../helpers/fixtures.js';
 import {
   api,
@@ -26,6 +28,7 @@ describe('/api/requests', () => {
       status: 'new',
       createdAt: expect.any(String),
       updatedAt: expect.any(String),
+      assignedTechnicians: [],
     });
 
     const fetched = await api().get(`/api/requests/${created.body.data.id}`).expect(200);
@@ -94,6 +97,49 @@ describe('/api/requests', () => {
     });
 
     expectApiError(response, 409, 'CONFLICT');
+  });
+
+  it('добавляет назначенных техников с ролью и не меняет прежние поля', async () => {
+    const equipment = await createEquipment();
+    const requestItem = await createRequest(equipment.id, { title: 'Assign technicians' });
+    initModels(getSequelize());
+    const technician = await Technician.create({
+      fullName: 'Иванов Алексей',
+      specialization: 'Электрика',
+      employeeNumber: `EMP-${requestItem.id.slice(0, 8)}`,
+    });
+    await RequestAssignee.create({
+      requestId: requestItem.id,
+      technicianId: technician.id,
+      role: 'lead',
+      hours: '1.50',
+    });
+
+    const response = await api().get(`/api/requests/${requestItem.id}`).expect(200);
+
+    expect(response.body.data).toMatchObject({
+      id: requestItem.id,
+      equipmentId: equipment.id,
+      title: 'Assign technicians',
+      status: 'new',
+      priority: requestItem.priority,
+    });
+    expect(response.body.data.assignedTechnicians).toEqual([
+      {
+        id: technician.id,
+        fullName: 'Иванов Алексей',
+        specialization: 'Электрика',
+        employeeNumber: technician.employeeNumber,
+        role: 'lead',
+        hours: '1.50',
+      },
+    ]);
+
+    const listed = await api()
+      .get('/api/requests')
+      .query({ equipmentId: equipment.id })
+      .expect(200);
+    expect(listed.body.data[0]).not.toHaveProperty('assignedTechnicians');
   });
 
   it('удаляет заявку', async () => {

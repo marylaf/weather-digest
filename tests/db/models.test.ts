@@ -1,4 +1,5 @@
-import { Sequelize, type FindOptions, type Model, type ModelStatic } from 'sequelize';
+import { type FindOptions, type Model, type ModelStatic } from 'sequelize';
+import { getSequelize } from '../../src/db/database.js';
 import { Equipment } from '../../src/db/models/equipment.js';
 import { EquipmentPassport } from '../../src/db/models/equipmentPassport.js';
 import { initModels, MaintenanceRequest } from '../../src/db/models/index.js';
@@ -13,12 +14,7 @@ import {
   maintenanceRequestWithTechniciansOptions,
 } from '../../src/db/queries/reads.js';
 
-const sequelize = new Sequelize('weather_digest', 'user', 'password', {
-  host: '127.0.0.1',
-  dialect: 'postgres',
-  logging: false,
-});
-
+const sequelize = getSequelize();
 initModels(sequelize);
 
 describe('sequelize models', () => {

@@ -1,12 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { DEFAULT_LIMIT, DEFAULT_PAGE } from '../../config/constants.js';
 import {
   ConflictError,
   HttpAppError,
   NotFoundError,
   ValidationError,
 } from '../../errors/httpErrors.js';
-import type { SortOrder } from '../../types/equipment.js';
 import type {
   CreateRequestInput,
   ImportRequestError,
@@ -15,17 +13,12 @@ import type {
   MaintenanceRequest,
   RequestListQuery,
   RequestListResult,
-  RequestSortField,
   RequestStatus,
   UpdateRequestInput,
 } from '../../types/request.js';
-import { isOpenRequestStatus } from '../../types/request.js';
 import * as equipmentRepository from '../repositories/equipment.repository.js';
 import * as requestRepository from '../repositories/request.repository.js';
 import { createRequestBodySchema } from '../validators/request.js';
-
-const DEFAULT_SORT_BY: RequestSortField = 'createdAt';
-const DEFAULT_ORDER: SortOrder = 'asc';
 
 const STATUS_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
   new: ['in_progress', 'rejected'],
@@ -116,23 +109,11 @@ export async function getRequestById(id: string): Promise<MaintenanceRequest> {
 
 /**
  * Query params: status, priority, equipmentId, createdFrom, createdTo, sortBy, order, page, limit.
+ * Filtering, sorting and pagination run in PostgreSQL.
  * sortBy whitelist: title, priority, status, createdAt, plannedAt, equipmentId.
  */
 export async function listRequests(query: RequestListQuery): Promise<RequestListResult> {
-  const items = await requestRepository.findAll();
-  const filtered = items.filter((item) => matchesFilters(item, query));
-  const total = filtered.length;
-  const sortBy = query.sortBy ?? DEFAULT_SORT_BY;
-  const order = query.order ?? DEFAULT_ORDER;
-  const sorted = [...filtered].sort((left, right) => compareRequests(left, right, sortBy, order));
-  const page = query.page ?? DEFAULT_PAGE;
-  const limit = query.limit ?? DEFAULT_LIMIT;
-  const start = (page - 1) * limit;
-
-  return {
-    data: sorted.slice(start, start + limit),
-    meta: { total, page, limit },
-  };
+  return requestRepository.list(query);
 }
 
 export async function listRequestsByEquipmentId(
@@ -200,8 +181,7 @@ export async function deleteRequest(id: string): Promise<void> {
 }
 
 export async function hasOpenRequests(equipmentId: string): Promise<boolean> {
-  const items = await requestRepository.findByEquipmentId(equipmentId);
-  return items.some((item) => isOpenRequestStatus(item.status));
+  return requestRepository.hasOpenByEquipmentId(equipmentId);
 }
 
 async function assertEquipmentExists(equipmentId: string): Promise<void> {
@@ -229,52 +209,4 @@ function assertStatusTransition(from: RequestStatus, to: RequestStatus): void {
   if (!STATUS_TRANSITIONS[from].includes(to)) {
     throw new ConflictError(`Cannot transition status from ${from} to ${to}`);
   }
-}
-
-function matchesFilters(item: MaintenanceRequest, query: RequestListQuery): boolean {
-  if (query.status !== undefined && item.status !== query.status) {
-    return false;
-  }
-
-  if (query.priority !== undefined && item.priority !== query.priority) {
-    return false;
-  }
-
-  if (query.equipmentId !== undefined && item.equipmentId !== query.equipmentId) {
-    return false;
-  }
-
-  const createdAt = Date.parse(item.createdAt);
-
-  if (query.createdFrom !== undefined) {
-    const from = Date.parse(query.createdFrom);
-    if (!Number.isNaN(from) && (Number.isNaN(createdAt) || createdAt < from)) {
-      return false;
-    }
-  }
-
-  if (query.createdTo !== undefined) {
-    const to = Date.parse(query.createdTo);
-    if (!Number.isNaN(to) && (Number.isNaN(createdAt) || createdAt > to)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function compareRequests(
-  left: MaintenanceRequest,
-  right: MaintenanceRequest,
-  sortBy: RequestSortField,
-  order: SortOrder,
-): number {
-  const leftValue = left[sortBy] ?? '';
-  const rightValue = right[sortBy] ?? '';
-  const result = leftValue.localeCompare(rightValue, 'en', {
-    numeric: true,
-    sensitivity: 'base',
-  });
-  const directed = order === 'asc' ? result : -result;
-  return directed !== 0 ? directed : left.id.localeCompare(right.id);
 }
