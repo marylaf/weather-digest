@@ -17,7 +17,8 @@ const REQUEST_STATUSES = new Set(['new', 'in_progress', 'done', 'rejected']);
 
 /**
  * Reads Case 2 JSON files (equipment.json / requests.json) into the relational schema.
- * The files themselves stay in place.
+ * Both files are optional: a clean checkout has neither, and then this seed does nothing.
+ * One file without the other is a configuration error.
  *
  * @param {import('sequelize').QueryInterface} queryInterface
  */
@@ -102,6 +103,24 @@ async function down(queryInterface) {
 function readSnapshot() {
   const equipmentFile = resolveDataFile('EQUIPMENT_FILE', DEFAULT_EQUIPMENT_FILE);
   const requestsFile = resolveDataFile('REQUESTS_FILE', DEFAULT_REQUESTS_FILE);
+  const equipmentExists = fs.existsSync(equipmentFile);
+  const requestsExists = fs.existsSync(requestsFile);
+
+  if (!equipmentExists && !requestsExists) {
+    console.info(
+      `File import skipped: neither ${equipmentFile} nor ${requestsFile} exists. ` +
+        'Put both JSON files in place to import Case 2 data.',
+    );
+    return { sites: [], equipment: [], requests: [], history: [] };
+  }
+
+  if (!equipmentExists || !requestsExists) {
+    const missing = equipmentExists ? requestsFile : equipmentFile;
+    throw new Error(
+      `Case 2 file storage was not found at ${missing}. Set EQUIPMENT_FILE and REQUESTS_FILE together, or omit both files.`,
+    );
+  }
+
   const equipmentItems = readJsonArray(equipmentFile).map((item, index) =>
     parseEquipment(item, index, equipmentFile),
   );
@@ -195,12 +214,6 @@ function resolveDataFile(envName, fallback) {
 }
 
 function readJsonArray(filePath) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(
-      `Case 2 file storage was not found at ${filePath}. Set EQUIPMENT_FILE and REQUESTS_FILE or keep ./data/*.json.`,
-    );
-  }
-
   const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
   if (!Array.isArray(parsed)) {

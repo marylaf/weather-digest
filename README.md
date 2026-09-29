@@ -2,7 +2,7 @@
 
 REST API для учёта оборудования ветро- и солнечной генерации и заявок на обслуживание. По координатам оборудования запрашивается прогноз Open-Meteo: можно понять, подходят ли ближайшие сутки для наружных работ (нет осадков и ветер ниже порога).
 
-Учёт оборудования и заявок лежит в PostgreSQL. К базе ходит Sequelize: модели в `src/db/models`, миграции и сиды — через `sequelize-cli`. `EQUIPMENT_FILE` и `REQUESTS_FILE` нужны только сидеру импорта старых JSON, runtime их не читает. Изменяющие запросы (`POST`, `PATCH`, `DELETE`) требуют ключ в `X-API-Key` или `Authorization: Bearer <ключ>`. GET открыт.
+Учёт оборудования и заявок лежит в PostgreSQL. К базе ходит Sequelize: модели в `src/db/models`, миграции и сиды — через `sequelize-cli`. Изменяющие запросы (`POST`, `PATCH`, `DELETE`) требуют ключ в `X-API-Key` или `Authorization: Bearer <ключ>`. GET открыт.
 
 Базовый URL: `http://localhost:3000/api`.
 
@@ -17,7 +17,7 @@ cp .env.example .env
 npm install
 docker compose up -d --wait postgres
 npm run db:migrate
-npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
+npm run db:seed
 npm run api
 ```
 
@@ -25,7 +25,7 @@ npm run api
 
 API подключается как `DB_APP_USER`. Эта роль читает и меняет рабочие таблицы, в `request_status_history` может только вставлять строки. `UPDATE` и `DELETE` журнала ей не выданы, как и право создавать объекты в схеме. Миграции и сиды выполняет владелец `DB_USER`: `npm run db:migrate` сначала создаёт роль приложения (`scripts/ensure-app-role.cjs`), затем накатывает миграции и выдаёт права.
 
-`npm run db:seed` гоняет оба сида. Второй читает `./data/equipment.json` и `./data/requests.json`, а каталог `data/` в git не входит. На чистом клоне этих файлов нет, поэтому `db:seed` упадёт на импорте. Демо-сида хватает, чтобы открыть API и коллекцию Postman.
+`npm run db:seed` применяет демо-данные и сид импорта. Каталога `data/` в git нет. Если нет ни `./data/equipment.json`, ни `./data/requests.json`, импорт пропускается, и для API с коллекцией Postman хватает демо-сида. Если на месте только один из двух файлов, сид останавливается с ошибкой.
 
 ## PostgreSQL
 
@@ -50,13 +50,13 @@ npm run db:migrate
 ### Сиды
 
 ```bash
-npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
+npm run db:seed
 npm run db:seed:undo:all
 ```
 
 `20260928230000-demo-maintenance.cjs` кладёт две площадки (`MSK-NORTH`, `SOCHI-COAST`), шесть единиц оборудования с паспортами, пять техников и заявки с историей и назначениями. Идентификаторы, на которые опирается Postman: `siteId` `a1111111-1111-4111-8111-111111111111`, техники `d0000000-0000-4000-8000-000000000001` и `…0002`.
 
-`20260928230100-import-file-storage.cjs` переносит старые JSON в те же таблицы. Его запускает `npm run db:seed` вместе с демо-сидом, если оба файла на месте. Импорт помечает заявки автором `file-import`, площадки — кодом с префиксом `FILE-`.
+`20260928230100-import-file-storage.cjs` переносит JSON Кейса 2 в те же таблицы, когда заданы оба файла (`EQUIPMENT_FILE` и `REQUESTS_FILE`, по умолчанию `./data/equipment.json` и `./data/requests.json`). Эти пути читает только сид, не API. Импорт помечает заявки автором `file-import`, площадки — кодом с префиксом `FILE-`. Без обоих файлов сид пишет в stdout, что импорт пропущен, и завершается успешно.
 
 ### Откат миграций
 
@@ -74,7 +74,7 @@ npm run db:migrate
 docker compose down -v
 docker compose up -d --wait postgres
 npm run db:migrate
-npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
+npm run db:seed
 ```
 
 `down -v` удаляет `postgres_data`.
@@ -674,7 +674,7 @@ docs/postman/
 docker compose up --build api
 ```
 
-Миграции к этому моменту уже применены с хоста, как в разделе «Запуск с нуля»: контейнер таблиц не создаёт. API слушает `http://localhost:3000` (`GET /api/health`, HTML на `/`). В контейнер смонтированы `./data` и `./public`, `DB_HOST` внутри него — `postgres`. Том базы — `postgres_data`. CLI-сводка по городам: `docker compose run --rm weather-digest`.
+Миграции к этому моменту уже применены с хоста, как в разделе «Запуск с нуля»: контейнер таблиц не создаёт. API слушает `http://localhost:3000` (`GET /api/health`, HTML на `/`). В контейнер смонтирован `./public`, `DB_HOST` внутри него — `postgres`. Том базы — `postgres_data`. CLI-сводка по городам: `docker compose run --rm weather-digest`.
 
 ## Переменные окружения
 
@@ -687,8 +687,8 @@ docker compose up --build api
 | `RATE_LIMIT_WINDOW_MS` | окно лимита, мс                                                                                           | `60000`                                       |
 | `RATE_LIMIT_MAX`       | запросов на IP за окно                                                                                    | `100`                                         |
 | `JSON_BODY_LIMIT`      | максимум JSON body                                                                                        | `100kb`                                       |
-| `EQUIPMENT_FILE`       | JSON для сидера импорта, не для runtime API                                                               | `./data/equipment.json`                       |
-| `REQUESTS_FILE`        | JSON для сидера импорта, не для runtime API                                                               | `./data/requests.json`                        |
+| `EQUIPMENT_FILE`       | JSON Кейса 2 для сида импорта. Вместе с `REQUESTS_FILE`; если нет обоих файлов, импорт пропускается       | `./data/equipment.json`                       |
+| `REQUESTS_FILE`        | JSON заявок Кейса 2 для того же сида                                                                      | `./data/requests.json`                        |
 | `FORECAST_URL`         | прогноз Open-Meteo                                                                                        | `https://api.open-meteo.com/v1/forecast`      |
 | `TIMEOUT_MS`           | таймаут исходящих запросов                                                                                | `5000`                                        |
 | `REQUEST_TIMEOUT_MS`   | то же, имеет приоритет над `TIMEOUT_MS`                                                                   | —                                             |
@@ -731,7 +731,7 @@ CLI-сводка по городам (`npm start -- --city "Москва"`) ис
 | `npm run db:migrate`                   | применить миграции                                 |
 | `npm run db:migrate:undo`              | откатить последнюю                                 |
 | `npm run db:migrate:undo:all`          | откатить все                                       |
-| `npm run db:seed`                      | оба сида; нужен `data/*.json` для импорта          |
+| `npm run db:seed`                      | демо-данные и импорт JSON, если оба файла на месте |
 | `npm run db:seed:undo:all`             | откатить сиды                                      |
 | `docker compose up -d --wait postgres` | поднять Postgres и дождаться healthcheck           |
 | `docker compose up --build api`        | API в контейнере, Postgres поднимется вместе с ним |
