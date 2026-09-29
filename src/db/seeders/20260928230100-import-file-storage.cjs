@@ -15,13 +15,6 @@ const EQUIPMENT_STATUSES = new Set(['operational', 'maintenance', 'fault', 'deco
 const REQUEST_PRIORITIES = new Set(['low', 'medium', 'high', 'critical']);
 const REQUEST_STATUSES = new Set(['new', 'in_progress', 'done', 'rejected']);
 
-/**
- * Reads Case 2 JSON files (equipment.json / requests.json) into the relational schema.
- * Both files are optional: a clean checkout has neither, and then this seed does nothing.
- * One file without the other is a configuration error.
- *
- * @param {import('sequelize').QueryInterface} queryInterface
- */
 async function up(queryInterface) {
   const snapshot = readSnapshot();
   const importedAt = new Date().toISOString();
