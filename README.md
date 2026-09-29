@@ -2,83 +2,264 @@
 
 REST API для учёта оборудования ветро- и солнечной генерации и заявок на обслуживание. По координатам оборудования запрашивается прогноз Open-Meteo: можно понять, подходят ли ближайшие сутки для наружных работ (нет осадков и ветер ниже порога).
 
-Данные оборудования и заявок хранятся в PostgreSQL (Sequelize). `EQUIPMENT_FILE` и `REQUESTS_FILE` нужны только сидеру импорта старых JSON. Изменяющие запросы (`POST`, `PATCH`, `DELETE`) требуют ключ в `X-API-Key` или `Authorization: Bearer <ключ>`. GET открыт.
+Учёт оборудования и заявок лежит в PostgreSQL. К базе ходит Sequelize: модели в `src/db/models`, миграции и сиды — через `sequelize-cli`. `EQUIPMENT_FILE` и `REQUESTS_FILE` нужны только сидеру импорта старых JSON, runtime их не читает. Изменяющие запросы (`POST`, `PATCH`, `DELETE`) требуют ключ в `X-API-Key` или `Authorization: Bearer <ключ>`. GET открыт.
 
 Базовый URL: `http://localhost:3000/api`.
 
-## Запуск
+## Запуск с нуля
+
+Node.js 20+, npm, Docker. Open-Meteo нужен только для `GET /api/equipment/:id/weather`.
 
 ```bash
 git clone https://github.com/marylaf/weather-digest.git
 cd weather-digest
 cp .env.example .env
 npm install
+docker compose up -d --wait postgres
+npm run db:migrate
+npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
 npm run api
 ```
 
-Нужны Node.js 20+, npm и доступ к Open-Meteo (для `GET /api/equipment/:id/weather`).
+`DB_HOST=localhost` в `.env.example` — это хост, с которого запускаются `npm run api` и `sequelize-cli`. В контейнере `api` хост переопределён на `postgres`. Пароль и `API_KEY` берутся из `.env`, в репозиторий их не кладут.
 
-| Команда                         | Назначение                                    |
-| ------------------------------- | --------------------------------------------- |
-| `npm run api`                   | Express API и HTML-страница заявок на `:3000` |
-| `npm run api:dev`               | то же с перезапуском при изменениях           |
-| `npm test`                      | Jest + Supertest                              |
-| `docker compose up --build api` | API в контейнере на `:3000`                   |
-| `npm run web`                   | Vite-просмотр сохранённых отчётов на `:5173`  |
-| `npm start -- --city "Москва"`  | CLI-сводка погоды (отдельный режим)           |
+`npm run db:seed` гоняет оба сида. Второй читает `./data/equipment.json` и `./data/requests.json`, а каталог `data/` в git не входит. На чистом клоне этих файлов нет, поэтому `db:seed` упадёт на импорте. Демо-сида хватает, чтобы открыть API и коллекцию Postman.
+
+## PostgreSQL
+
+Контейнер `postgres` — образ `postgres:16-alpine`. Имя базы, пользователь и пароль берутся из `DB_NAME`, `DB_USER`, `DB_PASSWORD` (без них compose не стартует). Порт на хосте — `DB_PORT`, по умолчанию `5432`. Данные — volume `postgres_data`. Healthcheck — `pg_isready`.
+
+```bash
+docker compose up -d --wait postgres
+```
+
+`docker compose up --build api` поднимает и Postgres (у `api` стоит `depends_on` с `condition: service_healthy`), но таблицы сам не создаёт. Миграции по-прежнему с хоста.
+
+### Миграции
+
+Файлы: `src/db/migrations/`. Пути CLI задаёт `.sequelizerc`, подключение — `src/db/sequelize-cli.cjs` (читает `.env`).
+
+```bash
+npm run db:migrate
+```
+
+Порядок: `sites`, `equipment`, `equipment_passports`, `technicians`, `maintenance_requests`, `request_status_history`, `request_assignees`.
+
+### Сиды
+
+```bash
+npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
+npm run db:seed:undo:all
+```
+
+`20260928230000-demo-maintenance.cjs` кладёт две площадки (`MSK-NORTH`, `SOCHI-COAST`), шесть единиц оборудования с паспортами, пять техников и заявки с историей и назначениями. Идентификаторы, на которые опирается Postman: `siteId` `a1111111-1111-4111-8111-111111111111`, техники `d0000000-0000-4000-8000-000000000001` и `…0002`.
+
+`20260928230100-import-file-storage.cjs` переносит старые JSON в те же таблицы. Его запускает `npm run db:seed` вместе с демо-сидом, если оба файла на месте. Импорт помечает заявки автором `file-import`, площадки — кодом с префиксом `FILE-`.
+
+### Откат миграций
+
+```bash
+npm run db:migrate:undo
+npm run db:migrate:undo:all
+npm run db:migrate
+```
+
+`db:migrate:undo` снимает последнюю миграцию, `db:migrate:undo:all` — все, в обратном порядке. Повторное `db:migrate` накатывает их снова. Вместе с таблицей пропадают и строки в ней; после полного отката сиды запускают заново.
+
+Если нужно выбросить и данные volume:
+
+```bash
+docker compose down -v
+docker compose up -d --wait postgres
+npm run db:migrate
+npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
+```
+
+`down -v` удаляет `postgres_data`.
+
+## Схема базы
+
+| Таблица                  | Содержание                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------- |
+| `sites`                  | Площадка: `name`, уникальный `code`, `region`, `latitude`, `longitude`                            |
+| `equipment`              | Единица: `site_id`, `name`, тип и статус (enum), уникальный `serial_number`, `installation_date`  |
+| `equipment_passports`    | Паспорт: `manufacturer`, `model`, `nominal_power`, `last_verification_date`. Один на оборудование |
+| `technicians`            | Специалист: `full_name`, `specialization`, уникальный `employee_number`                           |
+| `maintenance_requests`   | Заявка: `equipment_id`, `title`, `description`, `priority`, `status`, `planned_at`, `author`      |
+| `request_status_history` | Смена статуса: `old_status`, `new_status`, `changed_by`, `comment`. Строки только добавляются     |
+| `request_assignees`      | Назначение: пара `(request_id, technician_id)`, `role` (`lead` \| `member`), `hours`              |
+
+У `request_status_history` триггер `request_status_history_forbid_mutation`: `UPDATE` и `DELETE` из SQL отклоняются. При удалении заявки сервис на время транзакции триггер выключает, стирает историю и включает обратно.
+
+Связи:
+
+- площадка — оборудование, 1:N (`equipment.site_id` → `sites.id`, `ON DELETE RESTRICT`);
+- оборудование — паспорт, не больше одного (`equipment_passports.equipment_id` уникален, `ON DELETE CASCADE`); паспорта может не быть;
+- оборудование — заявки, 1:N (`ON DELETE RESTRICT`);
+- заявка — история статусов, 1:N (`ON DELETE RESTRICT`);
+- заявка — техники, N:M через `request_assignees`. У заявки не больше одного `lead`: частичный уникальный индекс `request_assignees_one_lead_per_request`.
+
+```mermaid
+erDiagram
+  sites ||--o{ equipment : "site_id"
+  equipment ||--o| equipment_passports : "equipment_id"
+  equipment ||--o{ maintenance_requests : "equipment_id"
+  maintenance_requests ||--o{ request_status_history : "request_id"
+  maintenance_requests ||--o{ request_assignees : "request_id"
+  technicians ||--o{ request_assignees : "technician_id"
+```
+
+Площадка не копируется в каждую строку `equipment`: там только `site_id`. Паспорт — отдельная таблица, а не те же поля внутри оборудования. Техник описан в `technicians` один раз, в заявке на него ссылается `request_assignees` (роль и часы). Смены статуса лежат в `request_status_history`, а не колонками на заявке. Повторяющихся групп нет — схема в 3NF.
 
 ## Эндпоинты
 
-| Метод    | Путь                          | Auth | Код           | Описание                                                                                                                  |
-| -------- | ----------------------------- | ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `GET`    | `/api/health`                 | нет  | `200`         | Проверка живости: `{ "status": "ok" }`                                                                                    |
-| `GET`    | `/api/equipment`              | нет  | `200`         | Список оборудования. Query: `status`, `type`, `installedFrom`, `installedTo`, `sortBy`, `order`, `page`, `limit`          |
-| `POST`   | `/api/equipment`              | да   | `201`         | Создать оборудование. Заголовок `Location: /api/equipment/:id`                                                            |
-| `GET`    | `/api/equipment/:id`          | нет  | `200`         | Карточка оборудования                                                                                                     |
-| `PATCH`  | `/api/equipment/:id`          | да   | `200`         | Частичное обновление                                                                                                      |
-| `DELETE` | `/api/equipment/:id`          | да   | `204`         | Удалить, если нет открытых заявок (`new` / `in_progress`)                                                                 |
-| `GET`    | `/api/equipment/:id/requests` | нет  | `200`         | Заявки по оборудованию. Query: `status`, `priority`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit`       |
-| `GET`    | `/api/equipment/:id/weather`  | нет  | `200`         | Прогноз Open-Meteo и флаг `outdoorWorkSuitable`                                                                           |
-| `GET`    | `/api/requests`               | нет  | `200`         | Список заявок. Query: `status`, `priority`, `equipmentId`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit` |
-| `POST`   | `/api/requests`               | да   | `201`         | Создать заявку (`status` всегда `new`). `Location: /api/requests/:id`                                                     |
-| `POST`   | `/api/requests/import`        | да   | `201` / `207` | Пакетная загрузка: ошибки по записям не откатывают успешные. До 100 элементов                                             |
-| `GET`    | `/api/requests/:id`           | нет  | `200`         | Карточка заявки                                                                                                           |
-| `GET`    | `/api/sites/:id/summary`      | нет  | `200`         | Сводка заявок площадки: счётчики по статусу и приоритету, среднее время закрытия                                         |
-| `GET`    | `/api/reports/equipment-load` | нет  | `200`         | Нагрузка оборудования. Query: `createdFrom`, `createdTo`, `minRequests`                                                   |
-| `PATCH`  | `/api/requests/:id`           | да   | `200`         | Поля заявки без смены статуса                                                                                             |
-| `PATCH`  | `/api/requests/:id/status`    | да   | `200`         | Смена статуса по графу переходов                                                                                          |
-| `DELETE` | `/api/requests/:id`           | да   | `204`         | Удалить заявку                                                                                                            |
+Список — `{ "data", "meta" }`, карточка — `{ "data" }`, удаление — пустое тело. В карточке оборудования добавилось `passport` (`null`, если паспорта нет). В карточке заявки — `assignedTechnicians` (у новой заявки `[]`). В списке заявок этого поля нет: JOIN с назначениями сломал бы `LIMIT`.
+
+| Метод    | Путь                                  | Auth | Код           | Описание                                                                                                                  |
+| -------- | ------------------------------------- | ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `GET`    | `/api/health`                         | нет  | `200`         | Проверка живости: `{ "status": "ok" }`                                                                                    |
+| `GET`    | `/api/equipment`                      | нет  | `200`         | Список оборудования. Query: `status`, `type`, `installedFrom`, `installedTo`, `sortBy`, `order`, `page`, `limit`          |
+| `POST`   | `/api/equipment`                      | да   | `201`         | Создать оборудование. Заголовок `Location: /api/equipment/:id`                                                            |
+| `GET`    | `/api/equipment/:id`                  | нет  | `200`         | Карточка оборудования                                                                                                     |
+| `PATCH`  | `/api/equipment/:id`                  | да   | `200`         | Частичное обновление                                                                                                      |
+| `DELETE` | `/api/equipment/:id`                  | да   | `204`         | Удалить, если нет открытых заявок (`new` / `in_progress`)                                                                 |
+| `GET`    | `/api/equipment/:id/requests`         | нет  | `200`         | Заявки по оборудованию. Query: `status`, `priority`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit`       |
+| `GET`    | `/api/equipment/:id/weather`          | нет  | `200`         | Прогноз Open-Meteo и флаг `outdoorWorkSuitable`                                                                           |
+| `GET`    | `/api/requests`                       | нет  | `200`         | Список заявок. Query: `status`, `priority`, `equipmentId`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit` |
+| `POST`   | `/api/requests`                       | да   | `201`         | Создать заявку (`status` всегда `new`). `Location: /api/requests/:id`                                                     |
+| `POST`   | `/api/requests/import`                | да   | `201` / `207` | Пакетная загрузка: ошибки по записям не откатывают успешные. До 100 элементов                                             |
+| `GET`    | `/api/requests/:id`                   | нет  | `200`         | Карточка заявки, включая `assignedTechnicians`                                                                            |
+| `POST`   | `/api/requests/:id/assignees`         | да   | `200`         | Заменить бригаду целиком. Ровно один `lead`                                                                               |
+| `DELETE` | `/api/requests/:id/assignees/:userId` | да   | `204`         | Снять одного техника. `:userId` — это `technicians.id`                                                                    |
+| `GET`    | `/api/requests/:id/history`           | нет  | `200`         | История смен статуса, по `createdAt`                                                                                      |
+| `GET`    | `/api/sites/:id/summary`              | нет  | `200`         | Сводка заявок площадки: счётчики по статусу и приоритету, среднее время закрытия                                          |
+| `GET`    | `/api/reports/equipment-load`         | нет  | `200`         | Нагрузка оборудования. Query: `createdFrom`, `createdTo`, `minRequests`                                                   |
+| `PATCH`  | `/api/requests/:id`                   | да   | `200`         | Поля заявки без смены статуса                                                                                             |
+| `PATCH`  | `/api/requests/:id/status`            | да   | `200`         | Смена статуса по графу переходов                                                                                          |
+| `DELETE` | `/api/requests/:id`                   | да   | `204`         | Удалить заявку                                                                                                            |
 
 Списки отвечают `{ "data": [...], "meta": { "total", "page", "limit" } }`. По умолчанию `page=1`, `limit=10`, максимум `limit=100`. Карточка — `{ "data": { ... } }`. Удаление — пустое тело.
+
+### `POST /api/requests/:id/assignees`
+
+Заменяет состав бригады целиком. В теле массив `assignees`: `technicianId`, `role` (`lead` или `member`), необязательные `hours` (число или строка, 0…9999.99; если нет — `0.00`). Нужен хотя бы один человек, ровно один `lead`, без повтора `technicianId`. Ответ — карточка заявки.
+
+Техники ниже — из демо-сида.
+
+```bash
+curl -s http://localhost:3000/api/requests/e0000000-0000-4000-8000-000000000001/assignees \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $API_KEY" \
+  -d '{
+    "assignees": [
+      { "technicianId": "d0000000-0000-4000-8000-000000000001", "role": "lead", "hours": 4 },
+      { "technicianId": "d0000000-0000-4000-8000-000000000002", "role": "member", "hours": "2.00" }
+    ]
+  }'
+```
+
+```json
+{
+  "data": {
+    "id": "e0000000-0000-4000-8000-000000000001",
+    "equipmentId": "b0000000-0000-4000-8000-000000000001",
+    "title": "Осмотр лопастей северного ряда",
+    "status": "new",
+    "priority": "low",
+    "assignedTechnicians": [
+      {
+        "id": "d0000000-0000-4000-8000-000000000001",
+        "fullName": "Иванов Алексей Сергеевич",
+        "specialization": "Электрика",
+        "employeeNumber": "EMP-1001",
+        "role": "lead",
+        "hours": "4.00"
+      },
+      {
+        "id": "d0000000-0000-4000-8000-000000000002",
+        "fullName": "Петрова Мария Игоревна",
+        "specialization": "Механика ветроустановок",
+        "employeeNumber": "EMP-1002",
+        "role": "member",
+        "hours": "2.00"
+      }
+    ]
+  }
+}
+```
+
+Нет заявки или техника — `404`. Ноль или два `lead`, пустой список, повтор специалиста — `422`. Конфликт уникальности пары `(request_id, technician_id)` тоже `422`, транзакция откатывается.
+
+### `DELETE /api/requests/:id/assignees/:userId`
+
+Снимает одно назначение. В пути `userId` — это `technicians.id`. Успех — `204` без тела.
+
+```bash
+curl -s -X DELETE \
+  http://localhost:3000/api/requests/e0000000-0000-4000-8000-000000000001/assignees/d0000000-0000-4000-8000-000000000002 \
+  -H "X-API-Key: $API_KEY"
+```
+
+`404`, если нет заявки, техника или такой пары в `request_assignees`. Снять `lead` можно, пустая бригада после этого тоже допустима. Правило «ровно один lead» проверяется при полной замене, не при удалении строки.
+
+### `GET /api/requests/:id/history`
+
+История смен статуса по возрастанию `createdAt`. Заявка, созданная через API, до первого `PATCH .../status` отдаёт пустой массив: запись появляется вместе со сменой статуса. У демо-сида история уже есть, включая создание.
+
+```bash
+curl -s http://localhost:3000/api/requests/e0000000-0000-4000-8000-000000000001/history
+```
+
+```json
+{
+  "data": [
+    {
+      "id": "f0000000-0000-4000-8000-000000000011",
+      "requestId": "e0000000-0000-4000-8000-000000000001",
+      "oldStatus": null,
+      "newStatus": "new",
+      "changedBy": "Диспетчерская Москва",
+      "comment": "Заявка создана",
+      "createdAt": "2026-01-12T08:00:00.000Z"
+    }
+  ]
+}
+```
+
+Неизвестная заявка — `404`. Смена через API пишет `changedBy: "api"`.
 
 ## Модель
 
 ### Equipment
 
-| Поле           | Тип    | Ограничения                                                   |
-| -------------- | ------ | ------------------------------------------------------------- |
-| `id`           | string | UUID, выдаёт сервер                                           |
-| `name`         | string | 3–100 символов                                                |
-| `type`         | enum   | `turbine` \| `inverter` \| `sensor` \| `substation`           |
-| `serialNumber` | string | не пустой, уникальный                                         |
-| `location.lat` | number | −90…90                                                        |
-| `location.lon` | number | −180…180                                                      |
-| `status`       | enum   | `operational` \| `maintenance` \| `fault` \| `decommissioned` |
-| `installedAt`  | string | ISO-дата, не в будущем                                        |
+| Поле           | Тип            | Ограничения                                                                                                 |
+| -------------- | -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `id`           | string         | UUID, выдаёт сервер                                                                                         |
+| `name`         | string         | 3–100 символов                                                                                              |
+| `type`         | enum           | `turbine` \| `inverter` \| `sensor` \| `substation`                                                         |
+| `serialNumber` | string         | не пустой, уникальный                                                                                       |
+| `location.lat` | number         | −90…90                                                                                                      |
+| `location.lon` | number         | −180…180                                                                                                    |
+| `status`       | enum           | `operational` \| `maintenance` \| `fault` \| `decommissioned`                                               |
+| `installedAt`  | string         | ISO-дата, не в будущем                                                                                      |
+| `passport`     | object \| null | `id`, `manufacturer`, `model`, `nominalPower`, `lastVerificationDate`. У созданного через API обычно `null` |
+
+`location` в ответе — координаты площадки. `POST /api/equipment` ищет площадку с кодом `api-{lat}-{lon}` (шесть знаков после точки) и создаёт её, если такой ещё нет. Одинаковые координаты попадают на одну площадку.
 
 ### MaintenanceRequest
 
-| Поле          | Тип     | Ограничения                                    |
-| ------------- | ------- | ---------------------------------------------- |
-| `id`          | string  | UUID, выдаёт сервер                            |
-| `equipmentId` | string  | должен существовать                            |
-| `title`       | string  | 5–120 символов                                 |
-| `description` | string  | до 2000 символов                               |
-| `priority`    | enum    | `low` \| `medium` \| `high` \| `critical`      |
-| `status`      | enum    | `new` \| `in_progress` \| `done` \| `rejected` |
-| `plannedAt`   | string? | ISO datetime                                   |
-| `createdAt`   | string  | ISO datetime, выдаёт сервер                    |
-| `updatedAt`   | string  | ISO datetime, выдаёт сервер                    |
+| Поле                  | Тип     | Ограничения                                                                                                 |
+| --------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
+| `id`                  | string  | UUID, выдаёт сервер                                                                                         |
+| `equipmentId`         | string  | должен существовать                                                                                         |
+| `title`               | string  | 5–120 символов                                                                                              |
+| `description`         | string  | до 2000 символов                                                                                            |
+| `priority`            | enum    | `low` \| `medium` \| `high` \| `critical`                                                                   |
+| `status`              | enum    | `new` \| `in_progress` \| `done` \| `rejected`                                                              |
+| `plannedAt`           | string? | ISO datetime                                                                                                |
+| `createdAt`           | string  | ISO datetime, выдаёт сервер                                                                                 |
+| `updatedAt`           | string  | ISO datetime, выдаёт сервер                                                                                 |
+| `assignedTechnicians` | array   | только в карточке, не в списке. Поля: `id`, `fullName`, `specialization`, `employeeNumber`, `role`, `hours` |
 
 ## Переходы статусов заявки
 
@@ -102,26 +283,48 @@ stateDiagram-v2
 | `done`        | —                         |
 | `rejected`    | —                         |
 
-Открытые заявки — `new` и `in_progress`. Пока они есть, `DELETE /api/equipment/:id` возвращает `409`. Закрытые — `done` и `rejected`.
+Открытые заявки — `new` и `in_progress`. Закрытые — `done` и `rejected`.
+
+## Транзакции
+
+Смена статуса и запись в `request_status_history` идут в одной транзакции. Строка заявки берётся с `SELECT ... FOR UPDATE`, затем проверяется граф переходов. Если история не записалась, статус тоже откатывается.
+
+Переход в `in_progress` при пустой бригаде — `409`, `Cannot set status to in_progress without assigned technicians`. Заявка остаётся в прежнем статусе.
+
+Замена бригады тоже под блокировкой строки заявки: старые назначения удаляются, новые вставляются. Если в теле не ровно один `lead`, ответ `422` (`В бригаде должен быть ровно один специалист с ролью lead`) и в базу ничего не пишется. То же при повторе техника и при нарушении уникального индекса.
+
+Снятие одного назначения — отдельная короткая транзакция. Оно не проверяет, остался ли `lead`.
+
+## Удаление оборудования
+
+`DELETE /api/equipment/:id` при заявках `new` или `in_progress` возвращает `409` (`Equipment has open maintenance requests`). Внешний ключ `maintenance_requests.equipment_id` сам по себе `ON DELETE RESTRICT`, поэтому открытую заявку база тоже не даст обойти.
+
+Закрытые заявки (`done`, `rejected`) удалению не мешают: в той же транзакции сервис снимает их историю (триггер на это время выключен), назначения и сами заявки, затем строку оборудования. Паспорт уходит каскадом. Площадка остаётся.
 
 ## Отчёты
 
 ### `GET /api/sites/:id/summary`
 
-Считает заявки оборудования этой площадки. Неизвестная площадка — `404`. Площадка без заявок отдаёт нули и `averageCloseTimeSeconds: null`.
+Считает заявки оборудования этой площадки. Ключ не нужен. Неизвестная площадка — `404` (`Site not found`). Площадка без заявок отдаёт нули и `averageCloseTimeSeconds: null`.
 
-`averageCloseTimeSeconds` — среднее число секунд от `created_at` до первой записи в `request_status_history`, где статус стал `done` или `rejected`. Открытые заявки и закрытые без такой записи в среднее не входят. Счётчики и среднее считаются в PostgreSQL.
+```bash
+curl -s http://localhost:3000/api/sites/a1111111-1111-4111-8111-111111111111/summary
+```
+
+`a1111111-1111-4111-8111-111111111111` — площадка `MSK-NORTH` из демо-сида. После этого сида ответ такой:
 
 ```json
 {
   "data": {
-    "siteId": "6b1c2d3e-4f50-4182-9a3b-4c5d6e7f8091",
-    "requestsByStatus": { "new": 1, "in_progress": 0, "done": 2, "rejected": 1 },
-    "requestsByPriority": { "low": 1, "medium": 1, "high": 1, "critical": 1 },
-    "averageCloseTimeSeconds": 5400
+    "siteId": "a1111111-1111-4111-8111-111111111111",
+    "requestsByStatus": { "new": 4, "in_progress": 3, "done": 4, "rejected": 2 },
+    "requestsByPriority": { "low": 3, "medium": 3, "high": 3, "critical": 4 },
+    "averageCloseTimeSeconds": 158400
   }
 }
 ```
+
+`averageCloseTimeSeconds` — среднее число секунд от `created_at` до первой записи в `request_status_history`, где статус стал `done` или `rejected`. Открытые заявки и закрытые без такой записи в среднее не входят. Счётчики и среднее считаются в PostgreSQL.
 
 ### `GET /api/reports/equipment-load`
 
@@ -131,7 +334,11 @@ stateDiagram-v2
 
 `minRequests` — целое `>= 0`. Оно попадает в `HAVING` и отбрасывает оборудование с меньшим числом заявок в периоде. Если параметр не передан, порог `0`: единицы без заявок остаются, с нулями и `lastMaintenanceAt: null`.
 
-Нечисло, отрицательный `minRequests`, неразборчивая дата или `createdFrom` позже `createdTo` — `400`.
+Нечисло, отрицательный `minRequests`, неразборчивая дата или `createdFrom` позже `createdTo` — `400`. Ключ не нужен.
+
+```bash
+curl -s "http://localhost:3000/api/reports/equipment-load?createdFrom=2026-01-01&createdTo=2026-12-31&minRequests=1"
+```
 
 ```json
 {
@@ -148,6 +355,14 @@ stateDiagram-v2
 }
 ```
 
+## Запросы к PostgreSQL
+
+Значения в сыром SQL передаются через `bind` (отчёты) или `replacements` (удаление истории по списку id). В строку запроса они не склеиваются.
+
+`sortBy` принимается только из белого списка и мапится на заранее записанное выражение. Для оборудования: `name`, `type`, `status`, `serialNumber`, `installedAt`. Для заявок: `title`, `priority`, `status`, `createdAt`, `plannedAt`, `equipmentId`. `order` — `asc` или `desc`. Чужое поле — `422`.
+
+`page` и `limit` проверяются до запроса. `limit` — целое от 1 до 100, `page` — целое от 1, смещение не больше 100000. Иначе `400`.
+
 ## Формат ошибки
 
 Все ошибки API — один JSON. Поле `details` есть у валидации.
@@ -163,17 +378,17 @@ stateDiagram-v2
 }
 ```
 
-| HTTP | `code`                         | Когда                                                                    |
-| ---- | ------------------------------ | ------------------------------------------------------------------------ |
-| 400  | `VALIDATION_ERROR`             | битый JSON, неверные `page`/`limit` или query `/api/reports/equipment-load` |
-| 422  | `VALIDATION_ERROR`             | Zod: невалидные body, query или params                                   |
-| 401  | `UNAUTHORIZED`                 | нет или неверный ключ на POST/PATCH/DELETE                               |
-| 404  | `NOT_FOUND`                    | неизвестный id, маршрут или `equipmentId` при создании заявки            |
-| 409  | `CONFLICT`                     | занятый `serialNumber`, открытые заявки при удалении, запрещённый статус |
-| 413  | `PAYLOAD_TOO_LARGE`            | JSON больше `JSON_BODY_LIMIT` (по умолчанию 100kb)                       |
-| 429  | `RATE_LIMIT_EXCEEDED`          | превышен лимит `/api`                                                    |
-| 503  | `EXTERNAL_SERVICE_UNAVAILABLE` | Open-Meteo недоступен или вернул некорректный ответ                      |
-| 500  | `INTERNAL_ERROR`               | непредвиденная ошибка                                                    |
+| HTTP | `code`                         | Когда                                                                                               |
+| ---- | ------------------------------ | --------------------------------------------------------------------------------------------------- |
+| 400  | `VALIDATION_ERROR`             | битый JSON, неверные `page`/`limit` или query `/api/reports/equipment-load`                         |
+| 422  | `VALIDATION_ERROR`             | Zod: невалидные body, query или params                                                              |
+| 401  | `UNAUTHORIZED`                 | нет или неверный ключ на POST/PATCH/DELETE                                                          |
+| 404  | `NOT_FOUND`                    | неизвестный id, маршрут или `equipmentId` при создании заявки                                       |
+| 409  | `CONFLICT`                     | занятый `serialNumber`, открытые заявки при удалении, запрещённый статус, `in_progress` без бригады |
+| 413  | `PAYLOAD_TOO_LARGE`            | JSON больше `JSON_BODY_LIMIT` (по умолчанию 100kb)                                                  |
+| 429  | `RATE_LIMIT_EXCEEDED`          | превышен лимит `/api`                                                                               |
+| 503  | `EXTERNAL_SERVICE_UNAVAILABLE` | Open-Meteo недоступен или вернул некорректный ответ                                                 |
+| 500  | `INTERNAL_ERROR`               | непредвиденная ошибка                                                                               |
 
 ## Примеры 201 / 400 / 409
 
@@ -207,12 +422,13 @@ Location: /api/equipment/8f3c1a2b-4d5e-6f70-8192-a3b4c5d6e7f8
     "serialNumber": "WT-001",
     "location": { "lat": 55.75, "lon": 37.62 },
     "status": "operational",
-    "installedAt": "2024-06-01"
+    "installedAt": "2024-06-01",
+    "passport": null
   }
 }
 ```
 
-Так же создаётся заявка: `POST /api/requests` с `equipmentId`, `title` (≥ 5 символов), `description`, `priority`. Сервер ставит `status: "new"`.
+Так же создаётся заявка: `POST /api/requests` с `equipmentId`, `title` (≥ 5 символов), `description`, `priority`. Сервер ставит `status: "new"` и `assignedTechnicians: []`.
 
 ### 422 VALIDATION_ERROR
 
@@ -268,6 +484,7 @@ curl -s http://localhost:3000/api/equipment \
 
 - `PATCH /api/requests/:id/status` с `{ "status": "done" }` у заявки в `new` → `Cannot transition status from new to done`
 - `DELETE /api/equipment/:id`, пока есть заявки `new` / `in_progress` → `Equipment has open maintenance requests`
+- `PATCH /api/requests/:id/status` с `{ "status": "in_progress" }` без назначений → `Cannot set status to in_progress without assigned technicians`
 
 ### 400 VALIDATION_ERROR
 
@@ -341,9 +558,9 @@ Cookie не используются: аутентификация идёт за
 }
 ```
 
-## Слои `src/api/`
+## Слои
 
-Слоистый Express: маршрут не ходит в файлы напрямую, контроллер не знает Zod, сервис не пишет HTTP.
+Маршрут проверяет Zod и отдаёт управление контроллеру. Контроллер читает `req`/`res` и вызывает сервис. Сервис держит правила: статусы, бригада, уникальный `serialNumber`. Репозиторий ходит в PostgreSQL через модели Sequelize (`src/db/models`). Схему создают миграции, `sync` в приложении нет.
 
 ```text
 src/api/
@@ -390,7 +607,7 @@ src/api/
     └── errorHandler.ts       # единый { error: { code, message, requestId } }
 ```
 
-Поток: **route → validate → controller → service → repository**. Ошибки сервиса (`ValidationError`, `NotFoundError`, `ConflictError`, …) ловит `errorHandler`.
+Ошибки сервиса (`ValidationError`, `NotFoundError`, `ConflictError`, …) ловит `errorHandler`.
 
 Порядок middleware в `app.ts` (и почему так):
 
@@ -402,35 +619,98 @@ src/api/
 6. роуты с `validate()` (body / params / query).
 7. `notFound` → `errorHandler`.
 
-Задание перечисляет «лог → JSON → requestId». Request id стоит раньше лога специально: иначе первый лог был бы без идентификатора, по которому потом ищут запись.
+Request id стоит раньше лога специально: иначе первая запись была бы без идентификатора, по которому её потом ищут.
+
+## Каталоги
+
+```text
+src/
+├── api/            # routes, controllers, services, repositories, validators, middlewares
+├── config/
+├── db/
+│   ├── migrations/
+│   ├── models/
+│   ├── seeders/
+│   └── queries/
+├── errors/
+├── format/         # CLI
+├── services/       # CLI-сводка погоды, не HTTP
+├── storage/
+├── types/
+└── utils/
+tests/
+web/                # Vite-просмотр сохранённых отчётов
+public/             # HTML заявок, её отдаёт Express
+docs/postman/
+```
+
+Конфиг CLI для Sequelize — `.sequelizerc` и `src/db/sequelize-cli.cjs`.
 
 ## Docker
 
+Образ API собирается из `Dockerfile` (`node:20-alpine`, `npm run build`, потом `node dist/api/server.js`). Миграции в образ не зашиты: их запускают с хоста, пока Postgres уже слушает порт.
+
 ```bash
-cp .env.example .env   # обязателен API_KEY
 docker compose up --build api
 ```
 
-API слушает `http://localhost:3000` (`GET /api/health`, HTML на `/`). Данные — том `./data`, статика — `./public`. CLI-сводка по городам по-прежнему: `docker compose run --rm weather-digest`.
+Миграции к этому моменту уже применены с хоста, как в разделе «Запуск с нуля»: контейнер таблиц не создаёт. API слушает `http://localhost:3000` (`GET /api/health`, HTML на `/`). В контейнер смонтированы `./data` и `./public`, `DB_HOST` внутри него — `postgres`. Том базы — `postgres_data`. CLI-сводка по городам: `docker compose run --rm weather-digest`.
 
 ## Переменные окружения
 
-| Переменная             | Описание                                                   | По умолчанию                                  |
-| ---------------------- | ---------------------------------------------------------- | --------------------------------------------- |
-| `PORT`                 | порт API                                                   | `3000`                                        |
-| `NODE_ENV`             | `development` или `production` (в production нет стека)    | `development`                                 |
-| `API_KEY`              | секрет для POST/PATCH/DELETE. Обязателен для `npm run api` | —                                             |
-| `CORS_ORIGINS`         | origin через запятую, без `*`                              | `http://localhost:5173,http://localhost:3000` |
-| `RATE_LIMIT_WINDOW_MS` | окно лимита, мс                                            | `60000`                                       |
-| `RATE_LIMIT_MAX`       | запросов на IP за окно                                     | `100`                                         |
-| `JSON_BODY_LIMIT`      | максимум JSON body                                         | `100kb`                                       |
-| `EQUIPMENT_FILE`       | JSON для сидера импорта, не для runtime API                | `./data/equipment.json`                       |
-| `REQUESTS_FILE`        | JSON для сидера импорта, не для runtime API                | `./data/requests.json`                        |
-| `FORECAST_URL`         | прогноз Open-Meteo                                         | `https://api.open-meteo.com/v1/forecast`      |
-| `TIMEOUT_MS`           | таймаут исходящих запросов                                 | `5000`                                        |
-| `REQUEST_TIMEOUT_MS`   | то же, имеет приоритет над `TIMEOUT_MS`                    | —                                             |
-| `MAX_WIND_SPEED`       | порог ветра для наружных работ                             | `10`                                          |
-| `UNITS`                | `metric` (°C, мм, м/с) или `imperial` (°F, in, mph)        | `metric`                                      |
-| `LOG_LEVEL`            | уровень pino: `debug` / `info` / `warn` / `error`          | `debug` в development, `info` в production    |
+| Переменная             | Описание                                                                                                  | По умолчанию                                  |
+| ---------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `PORT`                 | порт API                                                                                                  | `3000`                                        |
+| `NODE_ENV`             | `development` или `production` (в production нет стека)                                                   | `development`                                 |
+| `API_KEY`              | секрет для POST/PATCH/DELETE. Обязателен для `npm run api`                                                | —                                             |
+| `CORS_ORIGINS`         | origin через запятую, без `*`                                                                             | `http://localhost:5173,http://localhost:3000` |
+| `RATE_LIMIT_WINDOW_MS` | окно лимита, мс                                                                                           | `60000`                                       |
+| `RATE_LIMIT_MAX`       | запросов на IP за окно                                                                                    | `100`                                         |
+| `JSON_BODY_LIMIT`      | максимум JSON body                                                                                        | `100kb`                                       |
+| `EQUIPMENT_FILE`       | JSON для сидера импорта, не для runtime API                                                               | `./data/equipment.json`                       |
+| `REQUESTS_FILE`        | JSON для сидера импорта, не для runtime API                                                               | `./data/requests.json`                        |
+| `FORECAST_URL`         | прогноз Open-Meteo                                                                                        | `https://api.open-meteo.com/v1/forecast`      |
+| `TIMEOUT_MS`           | таймаут исходящих запросов                                                                                | `5000`                                        |
+| `REQUEST_TIMEOUT_MS`   | то же, имеет приоритет над `TIMEOUT_MS`                                                                   | —                                             |
+| `MAX_WIND_SPEED`       | порог ветра для наружных работ                                                                            | `10`                                          |
+| `UNITS`                | `metric` (°C, мм, м/с) или `imperial` (°F, in, mph)                                                       | `metric`                                      |
+| `LOG_LEVEL`            | уровень pino: `debug` / `info` / `warn` / `error`                                                         | `debug` в development, `info` в production    |
+| `DB_HOST`              | хост PostgreSQL. Для процесса на хосте — `localhost`; compose для контейнера `api` подставляет `postgres` | —                                             |
+| `DB_PORT`              | порт PostgreSQL                                                                                           | `5432` у compose, если переменная не задана   |
+| `DB_NAME`              | имя базы, обязательно                                                                                     | —                                             |
+| `DB_USER`              | пользователь, обязательно                                                                                 | —                                             |
+| `DB_PASSWORD`          | пароль, обязательно                                                                                       | —                                             |
+| `DB_POOL_MAX`          | максимум соединений Sequelize                                                                             | `5`                                           |
+| `DB_POOL_MIN`          | минимум, не больше `DB_POOL_MAX`                                                                          | `0`                                           |
+| `DB_POOL_ACQUIRE_MS`   | ожидание соединения из пула, мс                                                                           | `30000`                                       |
+| `DB_POOL_IDLE_MS`      | простой соединения до закрытия, мс                                                                        | `10000`                                       |
 
-CLI-сводка по городам (`npm start -- --city "Москва"`) использует те же `CITY`, `DAYS`, `NO_CACHE`, `GEOCODING_URL`, `REPORTS_DIR`. Коллекция Postman — `docs/postman/Equipment Maintenance API.postman_collection.json`. В ней заданы `{{baseUrl}}`, `{{apiKey}}`, а для бригады и сводки площадки — `{{leadTechnicianId}}`, `{{memberTechnicianId}}` и `{{siteId}}` из `npm run db:seed`. Порядок Runner: Health, Equipment, Requests, Assignees, Request History, Remove Assignee, Status, Negative, Reports, Cleanup, и в конце Security. Запрос Rate Limit запускать последним: pre-request делает `rateLimitBurst` вызовов `/api/health`, затем ожидается `429`.
+CLI-сводка по городам (`npm start -- --city "Москва"`) использует те же `CITY`, `DAYS`, `NO_CACHE`, `GEOCODING_URL`, `REPORTS_DIR`.
+
+## Postman
+
+Коллекция: `docs/postman/Equipment Maintenance API.postman_collection.json`. Импорт в Postman, затем Collection Runner. `{{baseUrl}}` по умолчанию `http://localhost:3000`, `{{apiKey}}` должен совпадать с `API_KEY`. `{{leadTechnicianId}}`, `{{memberTechnicianId}}` и `{{siteId}}` уже стоят на id демо-сида — без `20260928230000-demo-maintenance.cjs` группы Assignees и Reports не найдут техника и площадку.
+
+Порядок папок: Health, Equipment, Requests, Assignees, Request History, Remove Assignee, Status, Negative, Reports, Cleanup, в конце Security. Запрос Rate Limit запускать последним: pre-request делает `rateLimitBurst` вызовов `/api/health`, затем ожидается `429`.
+
+Рядом лежит `docs/postman/Weather Digest API.postman_collection.json` — это вызовы Open-Meteo для CLI, не маршруты Express.
+
+## Команды
+
+| Команда                                | Назначение                                         |
+| -------------------------------------- | -------------------------------------------------- |
+| `npm run api`                          | Express API и HTML заявок на `:3000`               |
+| `npm run api:dev`                      | то же с перезапуском                               |
+| `npm test`                             | Jest + Supertest                                   |
+| `npm run typecheck`                    | `tsc --noEmit`                                     |
+| `npm run lint`                         | ESLint и Prettier                                  |
+| `npm run web`                          | Vite, сохранённые отчёты на `:5173`                |
+| `npm start -- --city "Москва"`         | CLI-сводка погоды                                  |
+| `npm run db:migrate`                   | применить миграции                                 |
+| `npm run db:migrate:undo`              | откатить последнюю                                 |
+| `npm run db:migrate:undo:all`          | откатить все                                       |
+| `npm run db:seed`                      | оба сида; нужен `data/*.json` для импорта          |
+| `npm run db:seed:undo:all`             | откатить сиды                                      |
+| `docker compose up -d --wait postgres` | поднять Postgres и дождаться healthcheck           |
+| `docker compose up --build api`        | API в контейнере, Postgres поднимется вместе с ним |
+| `docker compose down -v`               | остановить и удалить volume базы                   |
