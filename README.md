@@ -21,7 +21,9 @@ npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
 npm run api
 ```
 
-`DB_HOST=localhost` в `.env.example` — это хост, с которого запускаются `npm run api` и `sequelize-cli`. В контейнере `api` хост переопределён на `postgres`. Пароль и `API_KEY` берутся из `.env`, в репозиторий их не кладут.
+`DB_HOST=localhost` в `.env.example` — это хост, с которого запускаются `npm run api` и `sequelize-cli`. В контейнере `api` хост переопределён на `postgres`. Пароли и `API_KEY` берутся из `.env`, в репозиторий их не кладут.
+
+API подключается как `DB_APP_USER`. Эта роль читает и меняет рабочие таблицы, в `request_status_history` может только вставлять строки. `UPDATE` и `DELETE` журнала ей не выданы, как и право создавать объекты в схеме. Миграции и сиды выполняет владелец `DB_USER`: `npm run db:migrate` сначала создаёт роль приложения (`scripts/ensure-app-role.cjs`), затем накатывает миграции и выдаёт права.
 
 `npm run db:seed` гоняет оба сида. Второй читает `./data/equipment.json` и `./data/requests.json`, а каталог `data/` в git не входит. На чистом клоне этих файлов нет, поэтому `db:seed` упадёт на импорте. Демо-сида хватает, чтобы открыть API и коллекцию Postman.
 
@@ -680,8 +682,10 @@ docker compose up --build api
 | `DB_HOST`              | хост PostgreSQL. Для процесса на хосте — `localhost`; compose для контейнера `api` подставляет `postgres` | —                                             |
 | `DB_PORT`              | порт PostgreSQL                                                                                           | `5432` у compose, если переменная не задана   |
 | `DB_NAME`              | имя базы, обязательно                                                                                     | —                                             |
-| `DB_USER`              | пользователь, обязательно                                                                                 | —                                             |
-| `DB_PASSWORD`          | пароль, обязательно                                                                                       | —                                             |
+| `DB_USER`              | владелец схемы для миграций и сидов, обязательно                                                          | —                                             |
+| `DB_PASSWORD`          | пароль владельца, обязательно                                                                             | —                                             |
+| `DB_APP_USER`          | роль API: DML по рабочим таблицам, по журналу статусов только `SELECT` и `INSERT`                         | —                                             |
+| `DB_APP_PASSWORD`      | пароль роли API, обязательно                                                                              | —                                             |
 | `DB_POOL_MAX`          | максимум соединений Sequelize                                                                             | `5`                                           |
 | `DB_POOL_MIN`          | минимум, не больше `DB_POOL_MAX`                                                                          | `0`                                           |
 | `DB_POOL_ACQUIRE_MS`   | ожидание соединения из пула, мс                                                                           | `30000`                                       |
