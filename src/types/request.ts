@@ -57,6 +57,26 @@ export interface UpdateRequestInput {
   plannedAt?: string;
 }
 
+export interface AssigneeInput {
+  technicianId: string;
+  role: 'lead' | 'member';
+  hours: string;
+}
+
+export interface ReplaceAssigneesInput {
+  assignees: AssigneeInput[];
+}
+
+export interface StatusHistoryEntry {
+  id: string;
+  requestId: string;
+  oldStatus: RequestStatus | null;
+  newStatus: RequestStatus;
+  changedBy: string;
+  comment: string | null;
+  createdAt: string;
+}
+
 export interface RequestListQuery {
   status?: RequestStatus;
   priority?: RequestPriority;

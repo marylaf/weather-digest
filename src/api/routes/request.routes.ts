@@ -4,7 +4,10 @@ import {
   deleteRequest,
   getRequestById,
   importRequests,
+  listRequestHistory,
   listRequests,
+  removeAssignee,
+  replaceAssignees,
   updateRequest,
   updateRequestStatus,
 } from '../controllers/request.controller.js';
@@ -13,6 +16,8 @@ import { validate } from '../middlewares/validate.js';
 import {
   createRequestBodySchema,
   importRequestsBodySchema,
+  replaceAssigneesBodySchema,
+  requestAssigneeParamsSchema,
   requestIdParamsSchema,
   requestListQuerySchema,
   updateRequestBodySchema,
@@ -32,6 +37,21 @@ requestRouter.patch(
   '/:id/status',
   validate({ params: requestIdParamsSchema, body: updateRequestStatusBodySchema }),
   asyncHandler(updateRequestStatus),
+);
+requestRouter.get(
+  '/:id/history',
+  validate({ params: requestIdParamsSchema }),
+  asyncHandler(listRequestHistory),
+);
+requestRouter.post(
+  '/:id/assignees',
+  validate({ params: requestIdParamsSchema, body: replaceAssigneesBodySchema }),
+  asyncHandler(replaceAssignees),
+);
+requestRouter.delete(
+  '/:id/assignees/:userId',
+  validate({ params: requestAssigneeParamsSchema }),
+  asyncHandler(removeAssignee),
 );
 requestRouter.get(
   '/:id',
