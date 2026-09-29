@@ -6,6 +6,8 @@ interface ValidationSchemas {
   body?: z.ZodType;
   params?: z.ZodType;
   query?: z.ZodType;
+  /** Статус Zod-ошибки этого маршрута. Без него query/body дают 422, кроме page/limit (400). */
+  errorStatus?: number;
 }
 
 export function validate(schemas: ValidationSchemas): RequestHandler {
@@ -33,7 +35,7 @@ export function validate(schemas: ValidationSchemas): RequestHandler {
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
-        next(ValidationError.fromZod(error, isPaginationError(error) ? 400 : 422));
+        next(ValidationError.fromZod(error, validationStatus(error, schemas.errorStatus)));
         return;
       }
 
@@ -43,6 +45,14 @@ export function validate(schemas: ValidationSchemas): RequestHandler {
 }
 
 const PAGINATION_FIELDS = new Set(['page', 'limit']);
+
+function validationStatus(error: z.ZodError, explicit: number | undefined): number {
+  if (explicit !== undefined) {
+    return explicit;
+  }
+
+  return isPaginationError(error) ? 400 : 422;
+}
 
 function isPaginationError(error: z.ZodError): boolean {
   return (

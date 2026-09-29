@@ -12,7 +12,9 @@ import { requestLogger } from './middlewares/requestLogger.js';
 import { requireApiKey } from './middlewares/requireApiKey.js';
 import { equipmentRouter } from './routes/equipment.routes.js';
 import { healthRouter } from './routes/health.routes.js';
+import { reportRouter } from './routes/report.routes.js';
 import { requestRouter } from './routes/request.routes.js';
+import { siteRouter } from './routes/site.routes.js';
 
 const { jsonBodyLimit } = loadConfig();
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public');
@@ -32,6 +34,8 @@ app.use('/api', requireApiKey);
 app.use('/api', healthRouter);
 app.use('/api/equipment', equipmentRouter);
 app.use('/api/requests', requestRouter);
+app.use('/api/sites', siteRouter);
+app.use('/api/reports', reportRouter);
 app.use(express.static(publicDir));
 app.use(notFound);
 app.use(errorHandler);
