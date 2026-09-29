@@ -43,6 +43,8 @@ npm run api
 | `POST`   | `/api/requests`               | да   | `201`         | Создать заявку (`status` всегда `new`). `Location: /api/requests/:id`                                                     |
 | `POST`   | `/api/requests/import`        | да   | `201` / `207` | Пакетная загрузка: ошибки по записям не откатывают успешные. До 100 элементов                                             |
 | `GET`    | `/api/requests/:id`           | нет  | `200`         | Карточка заявки                                                                                                           |
+| `GET`    | `/api/sites/:id/summary`      | нет  | `200`         | Сводка заявок площадки: счётчики по статусу и приоритету, среднее время закрытия                                         |
+| `GET`    | `/api/reports/equipment-load` | нет  | `200`         | Нагрузка оборудования. Query: `createdFrom`, `createdTo`, `minRequests`                                                   |
 | `PATCH`  | `/api/requests/:id`           | да   | `200`         | Поля заявки без смены статуса                                                                                             |
 | `PATCH`  | `/api/requests/:id/status`    | да   | `200`         | Смена статуса по графу переходов                                                                                          |
 | `DELETE` | `/api/requests/:id`           | да   | `204`         | Удалить заявку                                                                                                            |
@@ -100,7 +102,51 @@ stateDiagram-v2
 | `done`        | —                         |
 | `rejected`    | —                         |
 
-Открытые заявки — `new` и `in_progress`. Пока они есть, `DELETE /api/equipment/:id` возвращает `409`.
+Открытые заявки — `new` и `in_progress`. Пока они есть, `DELETE /api/equipment/:id` возвращает `409`. Закрытые — `done` и `rejected`.
+
+## Отчёты
+
+### `GET /api/sites/:id/summary`
+
+Считает заявки оборудования этой площадки. Неизвестная площадка — `404`. Площадка без заявок отдаёт нули и `averageCloseTimeSeconds: null`.
+
+`averageCloseTimeSeconds` — среднее число секунд от `created_at` до первой записи в `request_status_history`, где статус стал `done` или `rejected`. Открытые заявки и закрытые без такой записи в среднее не входят. Счётчики и среднее считаются в PostgreSQL.
+
+```json
+{
+  "data": {
+    "siteId": "6b1c2d3e-4f50-4182-9a3b-4c5d6e7f8091",
+    "requestsByStatus": { "new": 1, "in_progress": 0, "done": 2, "rejected": 1 },
+    "requestsByPriority": { "low": 1, "medium": 1, "high": 1, "critical": 1 },
+    "averageCloseTimeSeconds": 5400
+  }
+}
+```
+
+### `GET /api/reports/equipment-load`
+
+По каждой единице оборудования: число заявок, число закрытых (`done` и `rejected`), сумма плановых часов бригады (`request_assignees.hours`) и дата последнего выполнения (`MAX` времени перехода в `done`). Часы и история агрегируются до JOIN, чтобы несколько назначений и несколько строк истории не умножали сумму.
+
+Период режет заявки по `created_at`. Имена как у списка заявок: `createdFrom` и `createdTo`. Те же границы принимают `dateFrom` / `from` и `dateTo` / `to`, но вместе с каноническим именем значение должно совпадать. Дата `YYYY-MM-DD` для начала — `00:00:00.000Z`, для конца — `23:59:59.999Z`. Полный ISO datetime берётся как есть.
+
+`minRequests` — целое `>= 0`. Оно попадает в `HAVING` и отбрасывает оборудование с меньшим числом заявок в периоде. Если параметр не передан, порог `0`: единицы без заявок остаются, с нулями и `lastMaintenanceAt: null`.
+
+Нечисло, отрицательный `minRequests`, неразборчивая дата или `createdFrom` позже `createdTo` — `400`.
+
+```json
+{
+  "data": [
+    {
+      "equipmentId": "8f3c1a2b-4d5e-6f70-8192-a3b4c5d6e7f8",
+      "name": "Moscow turbine",
+      "requestCount": 3,
+      "closedRequestCount": 2,
+      "plannedLaborHours": "6.50",
+      "lastMaintenanceAt": "2026-01-01T02:00:00.000Z"
+    }
+  ]
+}
+```
 
 ## Формат ошибки
 
@@ -119,7 +165,7 @@ stateDiagram-v2
 
 | HTTP | `code`                         | Когда                                                                    |
 | ---- | ------------------------------ | ------------------------------------------------------------------------ |
-| 400  | `VALIDATION_ERROR`             | битый JSON, который Express не смог разобрать                            |
+| 400  | `VALIDATION_ERROR`             | битый JSON, неверные `page`/`limit` или query `/api/reports/equipment-load` |
 | 422  | `VALIDATION_ERROR`             | Zod: невалидные body, query или params                                   |
 | 401  | `UNAUTHORIZED`                 | нет или неверный ключ на POST/PATCH/DELETE                               |
 | 404  | `NOT_FOUND`                    | неизвестный id, маршрут или `equipmentId` при создании заявки            |
@@ -309,22 +355,28 @@ src/api/
 ├── routes/                   # пути и validate()
 │   ├── equipment.routes.ts
 │   ├── request.routes.ts
+│   ├── site.routes.ts
+│   ├── report.routes.ts
 │   └── health.routes.ts
 ├── controllers/              # req/res → сервис, статус и Location
 │   ├── equipment.controller.ts
 │   ├── request.controller.ts
+│   ├── report.controller.ts
 │   └── health.controller.ts
 ├── services/                 # правила: уникальность, статусы, погода
 │   ├── equipment.service.ts
-│   └── request.service.ts
+│   ├── request.service.ts
+│   └── report.service.ts
 ├── repositories/             # PostgreSQL через Sequelize
 │   ├── equipment.repository.ts
 │   ├── request.repository.ts
+│   ├── report.repository.ts
 │   ├── listQuery.ts
 │   └── db.ts
 ├── validators/               # схемы Zod
 │   ├── equipment.ts
 │   ├── request.ts
+│   ├── report.ts
 │   └── common.ts
 └── middlewares/
     ├── requestId.ts          # X-Request-Id
