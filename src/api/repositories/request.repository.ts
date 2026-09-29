@@ -7,7 +7,6 @@ import type {
   MaintenanceRequest,
   RequestListQuery,
   RequestListResult,
-  RequestPriority,
   RequestSortField,
   RequestStatus,
   StatusHistoryEntry,
@@ -17,7 +16,12 @@ import { RequestAssignee } from '../../db/models/requestAssignee.js';
 import { RequestStatusHistory } from '../../db/models/requestStatusHistory.js';
 import { Technician } from '../../db/models/technician.js';
 import { ensureDb, isUuid } from './db.js';
-import { resolvePageWindow, resolveSortField, resolveSortOrder } from './listQuery.js';
+import {
+  containsPattern,
+  resolvePageWindow,
+  resolveSortField,
+  resolveSortOrder,
+} from './listQuery.js';
 
 const API_AUTHOR = 'api';
 const DEFAULT_SORT: RequestSortField = 'createdAt';
@@ -359,32 +363,42 @@ function requestDetailQuery() {
 }
 
 function requestWhere(query: RequestListQuery): WhereOptions {
-  const where: {
-    status?: RequestStatus;
-    priority?: RequestPriority;
-    equipmentId?: string;
-    createdAt?: Record<symbol, Date>;
-  } = {};
+  const filters: WhereOptions[] = [];
 
   if (query.status !== undefined) {
-    where.status = query.status;
+    filters.push({ status: query.status });
   }
 
   if (query.priority !== undefined) {
-    where.priority = query.priority;
+    filters.push({ priority: query.priority });
   }
 
   if (query.equipmentId !== undefined) {
-    where.equipmentId = query.equipmentId;
+    filters.push({ equipmentId: query.equipmentId });
   }
 
   const created = timeRange(query.createdFrom, query.createdTo);
 
   if (created !== undefined) {
-    where.createdAt = created;
+    filters.push({ createdAt: created });
   }
 
-  return where;
+  if (query.q !== undefined) {
+    const pattern = containsPattern(query.q);
+    filters.push({
+      [Op.or]: [{ title: { [Op.iLike]: pattern } }, { description: { [Op.iLike]: pattern } }],
+    });
+  }
+
+  if (filters.length === 0) {
+    return {};
+  }
+
+  if (filters.length === 1) {
+    return filters[0] ?? {};
+  }
+
+  return { [Op.and]: filters };
 }
 
 function timeRange(

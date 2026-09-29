@@ -90,6 +90,7 @@ export const requestListQuerySchema = z.object({
   equipmentId: z.string().trim().min(1).optional(),
   createdFrom: isoDateSchema.optional(),
   createdTo: isoDateSchema.optional(),
+  q: z.string().trim().min(1).max(100).optional(),
   sortBy: z.enum(REQUEST_SORT_FIELDS, { error: 'Недопустимое значение' }).optional(),
   order: sortOrderQuerySchema,
   page: pageQuerySchema,

@@ -119,6 +119,17 @@ export function initMaintenanceRequestModel(sequelize: Sequelize): void {
           name: 'maintenance_requests_deleted_at_idx',
           fields: ['deleted_at'],
         },
+        {
+          name: 'maintenance_requests_status_created_at_idx',
+          fields: ['status', 'created_at'],
+          where: { deleted_at: null },
+        },
+        {
+          name: 'maintenance_requests_title_trgm_idx',
+          fields: ['title'],
+          using: 'GIN',
+          where: { deleted_at: null },
+        },
       ],
     },
   );

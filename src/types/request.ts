@@ -83,6 +83,7 @@ export interface RequestListQuery {
   equipmentId?: string;
   createdFrom?: string;
   createdTo?: string;
+  q?: string;
   sortBy?: RequestSortField;
   order?: SortOrder;
   page?: number;

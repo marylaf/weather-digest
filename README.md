@@ -119,28 +119,28 @@ erDiagram
 
 Список — `{ "data", "meta" }`, карточка — `{ "data" }`, удаление — пустое тело. В карточке оборудования добавилось `passport` (`null`, если паспорта нет). В карточке заявки — `assignedTechnicians` (у новой заявки `[]`). В списке заявок этого поля нет: JOIN с назначениями сломал бы `LIMIT`.
 
-| Метод    | Путь                                  | Auth | Код           | Описание                                                                                                                  |
-| -------- | ------------------------------------- | ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `GET`    | `/api/health`                         | нет  | `200`         | Проверка живости: `{ "status": "ok" }`                                                                                    |
-| `GET`    | `/api/equipment`                      | нет  | `200`         | Список оборудования. Query: `status`, `type`, `installedFrom`, `installedTo`, `sortBy`, `order`, `page`, `limit`          |
-| `POST`   | `/api/equipment`                      | да   | `201`         | Создать оборудование. Заголовок `Location: /api/equipment/:id`                                                            |
-| `GET`    | `/api/equipment/:id`                  | нет  | `200`         | Карточка оборудования                                                                                                     |
-| `PATCH`  | `/api/equipment/:id`                  | да   | `200`         | Частичное обновление                                                                                                      |
-| `DELETE` | `/api/equipment/:id`                  | да   | `204`         | Удалить, если нет открытых заявок (`new` / `in_progress`)                                                                 |
-| `GET`    | `/api/equipment/:id/requests`         | нет  | `200`         | Заявки по оборудованию. Query: `status`, `priority`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit`       |
-| `GET`    | `/api/equipment/:id/weather`          | нет  | `200`         | Прогноз Open-Meteo и флаг `outdoorWorkSuitable`                                                                           |
-| `GET`    | `/api/requests`                       | нет  | `200`         | Список заявок. Query: `status`, `priority`, `equipmentId`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit` |
-| `POST`   | `/api/requests`                       | да   | `201`         | Создать заявку (`status` всегда `new`). `Location: /api/requests/:id`                                                     |
-| `POST`   | `/api/requests/import`                | да   | `201` / `207` | Пакетная загрузка: ошибки по записям не откатывают успешные. До 100 элементов                                             |
-| `GET`    | `/api/requests/:id`                   | нет  | `200`         | Карточка заявки, включая `assignedTechnicians`                                                                            |
-| `POST`   | `/api/requests/:id/assignees`         | да   | `200`         | Заменить бригаду целиком. Ровно один `lead`                                                                               |
-| `DELETE` | `/api/requests/:id/assignees/:userId` | да   | `204`         | Снять одного техника. `:userId` — это `technicians.id`                                                                    |
-| `GET`    | `/api/requests/:id/history`           | нет  | `200`         | История смен статуса, по `createdAt`                                                                                      |
-| `GET`    | `/api/sites/:id/summary`              | нет  | `200`         | Сводка заявок площадки: счётчики по статусу и приоритету, среднее время закрытия                                          |
-| `GET`    | `/api/reports/equipment-load`         | нет  | `200`         | Нагрузка оборудования. Query: `createdFrom`, `createdTo`, `minRequests`                                                   |
-| `PATCH`  | `/api/requests/:id`                   | да   | `200`         | Поля заявки без смены статуса                                                                                             |
-| `PATCH`  | `/api/requests/:id/status`            | да   | `200`         | Смена статуса по графу переходов                                                                                          |
-| `DELETE` | `/api/requests/:id`                   | да   | `204`         | Удалить заявку                                                                                                            |
+| Метод    | Путь                                  | Auth | Код           | Описание                                                                                                                       |
+| -------- | ------------------------------------- | ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`    | `/api/health`                         | нет  | `200`         | Проверка живости: `{ "status": "ok" }`                                                                                         |
+| `GET`    | `/api/equipment`                      | нет  | `200`         | Список оборудования. Query: `status`, `type`, `installedFrom`, `installedTo`, `q`, `sortBy`, `order`, `page`, `limit`          |
+| `POST`   | `/api/equipment`                      | да   | `201`         | Создать оборудование. Заголовок `Location: /api/equipment/:id`                                                                 |
+| `GET`    | `/api/equipment/:id`                  | нет  | `200`         | Карточка оборудования                                                                                                          |
+| `PATCH`  | `/api/equipment/:id`                  | да   | `200`         | Частичное обновление                                                                                                           |
+| `DELETE` | `/api/equipment/:id`                  | да   | `204`         | Удалить, если нет открытых заявок (`new` / `in_progress`)                                                                      |
+| `GET`    | `/api/equipment/:id/requests`         | нет  | `200`         | Заявки по оборудованию. Query: `status`, `priority`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit`            |
+| `GET`    | `/api/equipment/:id/weather`          | нет  | `200`         | Прогноз Open-Meteo и флаг `outdoorWorkSuitable`                                                                                |
+| `GET`    | `/api/requests`                       | нет  | `200`         | Список заявок. Query: `status`, `priority`, `equipmentId`, `createdFrom`, `createdTo`, `q`, `sortBy`, `order`, `page`, `limit` |
+| `POST`   | `/api/requests`                       | да   | `201`         | Создать заявку (`status` всегда `new`). `Location: /api/requests/:id`                                                          |
+| `POST`   | `/api/requests/import`                | да   | `201` / `207` | Пакетная загрузка: ошибки по записям не откатывают успешные. До 100 элементов                                                  |
+| `GET`    | `/api/requests/:id`                   | нет  | `200`         | Карточка заявки, включая `assignedTechnicians`                                                                                 |
+| `POST`   | `/api/requests/:id/assignees`         | да   | `200`         | Заменить бригаду целиком. Ровно один `lead`                                                                                    |
+| `DELETE` | `/api/requests/:id/assignees/:userId` | да   | `204`         | Снять одного техника. `:userId` — это `technicians.id`                                                                         |
+| `GET`    | `/api/requests/:id/history`           | нет  | `200`         | История смен статуса, по `createdAt`                                                                                           |
+| `GET`    | `/api/sites/:id/summary`              | нет  | `200`         | Сводка заявок площадки: счётчики по статусу и приоритету, среднее время закрытия                                               |
+| `GET`    | `/api/reports/equipment-load`         | нет  | `200`         | Нагрузка оборудования. Query: `createdFrom`, `createdTo`, `minRequests`                                                        |
+| `PATCH`  | `/api/requests/:id`                   | да   | `200`         | Поля заявки без смены статуса                                                                                                  |
+| `PATCH`  | `/api/requests/:id/status`            | да   | `200`         | Смена статуса по графу переходов                                                                                               |
+| `DELETE` | `/api/requests/:id`                   | да   | `204`         | Удалить заявку                                                                                                                 |
 
 Списки отвечают `{ "data": [...], "meta": { "total", "page", "limit" } }`. По умолчанию `page=1`, `limit=10`, максимум `limit=100`. Карточка — `{ "data": { ... } }`. Удаление — пустое тело.
 
@@ -361,11 +361,15 @@ curl -s "http://localhost:3000/api/reports/equipment-load?createdFrom=2026-01-01
 
 ## Запросы к PostgreSQL
 
-Значения в сыром SQL передаются через `bind` (отчёты) или `replacements` (удаление истории по списку id). В строку запроса они не склеиваются.
+Значения в сыром SQL передаются через `bind` (отчёты) или `replacements` (сиды). В строку запроса они не склеиваются.
 
 `sortBy` принимается только из белого списка и мапится на заранее записанное выражение. Для оборудования: `name`, `type`, `status`, `serialNumber`, `installedAt`. Для заявок: `title`, `priority`, `status`, `createdAt`, `plannedAt`, `equipmentId`. `order` — `asc` или `desc`. Чужое поле — `422`.
 
+`q` ищет подстроку без учёта регистра: у оборудования по `name` и `serialNumber`, у заявок по `title` и `description`. Символы `%`, `_` и `\` в тексте запроса остаются обычными символами. Запрос — `ILIKE` с привязкой параметра, индекс `GIN` с `pg_trgm`.
+
 `page` и `limit` проверяются до запроса. `limit` — целое от 1 до 100, `page` — целое от 1, смещение не больше 100000. Иначе `400`.
+
+Индексы под списки и поиск: `equipment_status_type_active_idx`, `equipment_name_trgm_idx`, `maintenance_requests_status_created_at_idx`, `maintenance_requests_title_trgm_idx`. Сравнение плана до и после — в `docs/explain-indexes.md`.
 
 ## Формат ошибки
 

@@ -117,6 +117,17 @@ export function initEquipmentModel(sequelize: Sequelize): void {
           name: 'equipment_deleted_at_idx',
           fields: ['deleted_at'],
         },
+        {
+          name: 'equipment_status_type_active_idx',
+          fields: ['status', 'type'],
+          where: { deleted_at: null },
+        },
+        {
+          name: 'equipment_name_trgm_idx',
+          fields: ['name'],
+          using: 'GIN',
+          where: { deleted_at: null },
+        },
       ],
     },
   );

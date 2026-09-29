@@ -5,8 +5,6 @@ import type {
   EquipmentListQuery,
   EquipmentListResult,
   EquipmentSortField,
-  EquipmentStatus,
-  EquipmentType,
   GeoLocation,
 } from '../../types/equipment.js';
 import { EQUIPMENT_SORT_FIELDS } from '../../types/equipment.js';
@@ -14,7 +12,12 @@ import { Equipment as EquipmentModel } from '../../db/models/equipment.js';
 import { EquipmentPassport } from '../../db/models/equipmentPassport.js';
 import { Site } from '../../db/models/site.js';
 import { ensureDb, isUuid } from './db.js';
-import { resolvePageWindow, resolveSortField, resolveSortOrder } from './listQuery.js';
+import {
+  containsPattern,
+  resolvePageWindow,
+  resolveSortField,
+  resolveSortOrder,
+} from './listQuery.js';
 import { hideRequestsForEquipment } from './request.repository.js';
 
 const EQUIPMENT_ATTRIBUTES = [
@@ -198,27 +201,42 @@ function equipmentQuery() {
 }
 
 function equipmentWhere(query: EquipmentListQuery): WhereOptions {
-  const where: {
-    status?: EquipmentStatus;
-    type?: EquipmentType;
-    installationDate?: Record<symbol, string>;
-  } = {};
+  const filters: WhereOptions[] = [];
 
   if (query.status !== undefined) {
-    where.status = query.status;
+    filters.push({ status: query.status });
   }
 
   if (query.type !== undefined) {
-    where.type = query.type;
+    filters.push({ type: query.type });
   }
 
   const installed = dateRange(query.installedFrom, query.installedTo);
 
   if (installed !== undefined) {
-    where.installationDate = installed;
+    filters.push({ installationDate: installed });
   }
 
-  return where;
+  if (query.q !== undefined) {
+    const pattern = containsPattern(query.q);
+    filters.push({
+      [Op.or]: [{ name: { [Op.iLike]: pattern } }, { serialNumber: { [Op.iLike]: pattern } }],
+    });
+  }
+
+  return combineFilters(filters);
+}
+
+function combineFilters(filters: WhereOptions[]): WhereOptions {
+  if (filters.length === 0) {
+    return {};
+  }
+
+  if (filters.length === 1) {
+    return filters[0] ?? {};
+  }
+
+  return { [Op.and]: filters };
 }
 
 function dateRange(

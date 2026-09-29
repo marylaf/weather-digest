@@ -46,6 +46,16 @@ describe('/api/requests', () => {
     await resetStore();
   });
 
+  it('ищет заявку по фрагменту заголовка', async () => {
+    const equipment = await createEquipment();
+    await createRequest(equipment.id, { title: 'Замена подшипника' });
+    await createRequest(equipment.id, { title: 'Осмотр площадки' });
+
+    const found = await api().get('/api/requests').query({ q: 'ПОДШИП' }).expect(200);
+    expect(found.body.data).toEqual([expect.objectContaining({ title: 'Замена подшипника' })]);
+    expect(found.body.meta.total).toBe(1);
+  });
+
   it('создаёт заявку для существующего оборудования', async () => {
     const equipment = await createEquipment();
     const payload = requestPayload(equipment.id);
