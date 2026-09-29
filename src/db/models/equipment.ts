@@ -30,6 +30,7 @@ export class Equipment extends Model<
   declare installationDate: string;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
+  declare deletedAt: CreationOptional<Date | null>;
 
   declare Site?: NonAttribute<Site>;
   declare EquipmentPassport?: NonAttribute<EquipmentPassport>;
@@ -65,7 +66,6 @@ export function initEquipmentModel(sequelize: Sequelize): void {
       serialNumber: {
         type: DataTypes.STRING(128),
         allowNull: false,
-        unique: 'equipment_serial_number_unique',
         field: 'serial_number',
         validate: { len: [0, 128] },
       },
@@ -88,6 +88,11 @@ export function initEquipmentModel(sequelize: Sequelize): void {
         allowNull: false,
         field: 'updated_at',
       },
+      deletedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'deleted_at',
+      },
     },
     {
       sequelize,
@@ -96,10 +101,21 @@ export function initEquipmentModel(sequelize: Sequelize): void {
       freezeTableName: true,
       underscored: true,
       timestamps: true,
+      paranoid: true,
       indexes: [
         {
           name: 'equipment_site_id_idx',
           fields: ['site_id'],
+        },
+        {
+          name: 'equipment_serial_number_active_idx',
+          unique: true,
+          fields: ['serial_number'],
+          where: { deleted_at: null },
+        },
+        {
+          name: 'equipment_deleted_at_idx',
+          fields: ['deleted_at'],
         },
       ],
     },

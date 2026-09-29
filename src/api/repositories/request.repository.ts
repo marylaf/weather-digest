@@ -20,7 +20,6 @@ import { ensureDb, isUuid } from './db.js';
 import { resolvePageWindow, resolveSortField, resolveSortOrder } from './listQuery.js';
 
 const API_AUTHOR = 'api';
-const HISTORY_TRIGGER = 'request_status_history_forbid_mutation';
 const DEFAULT_SORT: RequestSortField = 'createdAt';
 
 const REQUEST_ATTRIBUTES = [
@@ -313,16 +312,17 @@ export async function remove(id: string): Promise<boolean> {
       return false;
     }
 
-    await deleteRequestGraph([id], transaction);
+    await existing.destroy({ transaction });
     return true;
   });
 }
 
 /**
- * Удаляет закрытые заявки оборудования вместе с историей и назначениями.
+ * Прячет закрытые заявки оборудования (`deleted_at`).
+ * История статусов и назначения остаются: журнал только дополняется.
  * Открытые заявки оставляют прежний ответ 409.
  */
-export async function deleteAllForEquipment(
+export async function hideRequestsForEquipment(
   equipmentId: string,
   transaction: Transaction,
 ): Promise<void> {
@@ -338,15 +338,10 @@ export async function deleteAllForEquipment(
     throw new ConflictError('Equipment has open maintenance requests');
   }
 
-  const rows = await MaintenanceRequestModel.findAll({
-    attributes: ['id'],
+  await MaintenanceRequestModel.destroy({
     where: { equipmentId },
     transaction,
   });
-  await deleteRequestGraph(
-    rows.map((row) => row.id),
-    transaction,
-  );
 }
 
 function requestDetailQuery() {
@@ -471,41 +466,6 @@ function readAssignment(technician: Technician): { role: 'lead' | 'member'; hour
   }
 
   return { role, hours: '0.00' };
-}
-
-async function deleteRequestGraph(ids: readonly string[], transaction: Transaction): Promise<void> {
-  if (ids.length === 0) {
-    return;
-  }
-
-  const sequelize = ensureDb();
-  await setHistoryTrigger(false, transaction);
-
-  try {
-    await sequelize.query('DELETE FROM request_status_history WHERE request_id IN (:ids)', {
-      replacements: { ids: [...ids] },
-      transaction,
-    });
-  } finally {
-    await setHistoryTrigger(true, transaction);
-  }
-
-  await RequestAssignee.destroy({
-    where: { requestId: [...ids] },
-    transaction,
-  });
-  await MaintenanceRequestModel.destroy({
-    where: { id: [...ids] },
-    transaction,
-  });
-}
-
-async function setHistoryTrigger(enabled: boolean, transaction: Transaction): Promise<void> {
-  const action = enabled ? 'ENABLE' : 'DISABLE';
-  await ensureDb().query(
-    `ALTER TABLE request_status_history ${action} TRIGGER ${HISTORY_TRIGGER}`,
-    { transaction },
-  );
 }
 
 function toIso(value: Date | string): string {

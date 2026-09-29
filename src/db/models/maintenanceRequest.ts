@@ -33,6 +33,7 @@ export class MaintenanceRequest extends Model<
   declare author: string;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
+  declare deletedAt: CreationOptional<Date | null>;
 
   declare Equipment?: NonAttribute<Equipment>;
   declare RequestStatusHistories?: NonAttribute<RequestStatusHistory[]>;
@@ -95,6 +96,11 @@ export function initMaintenanceRequestModel(sequelize: Sequelize): void {
         allowNull: false,
         field: 'updated_at',
       },
+      deletedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'deleted_at',
+      },
     },
     {
       sequelize,
@@ -103,10 +109,15 @@ export function initMaintenanceRequestModel(sequelize: Sequelize): void {
       freezeTableName: true,
       underscored: true,
       timestamps: true,
+      paranoid: true,
       indexes: [
         {
           name: 'maintenance_requests_equipment_id_idx',
           fields: ['equipment_id'],
+        },
+        {
+          name: 'maintenance_requests_deleted_at_idx',
+          fields: ['deleted_at'],
         },
       ],
     },

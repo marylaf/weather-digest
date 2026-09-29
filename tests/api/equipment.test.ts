@@ -179,6 +179,16 @@ describe('/api/equipment', () => {
     expectApiError(missing, 404, 'NOT_FOUND');
   });
 
+  it('снова принимает serialNumber после скрытия оборудования', async () => {
+    const payload = equipmentPayload({ serialNumber: 'SN-SOFT-1' });
+    const created = await withApiKey(api().post('/api/equipment')).send(payload).expect(201);
+    await withApiKey(api().delete(`/api/equipment/${created.body.data.id}`)).expect(204);
+
+    const again = await withApiKey(api().post('/api/equipment')).send(payload).expect(201);
+    expect(again.body.data.serialNumber).toBe('SN-SOFT-1');
+    expect(again.body.data.id).not.toBe(created.body.data.id);
+  });
+
   it('возвращает заявки по оборудованию', async () => {
     const equipment = await createEquipment();
     const requestItem = await createRequest(equipment.id, { title: 'Check inverter fans' });

@@ -15,7 +15,7 @@ import { EquipmentPassport } from '../../db/models/equipmentPassport.js';
 import { Site } from '../../db/models/site.js';
 import { ensureDb, isUuid } from './db.js';
 import { resolvePageWindow, resolveSortField, resolveSortOrder } from './listQuery.js';
-import { deleteAllForEquipment } from './request.repository.js';
+import { hideRequestsForEquipment } from './request.repository.js';
 
 const EQUIPMENT_ATTRIBUTES = [
   'id',
@@ -173,7 +173,7 @@ export async function remove(id: string): Promise<boolean> {
       return false;
     }
 
-    await deleteAllForEquipment(id, transaction);
+    await hideRequestsForEquipment(id, transaction);
     const deleted = await EquipmentModel.destroy({ where: { id }, transaction });
     return deleted > 0;
   });

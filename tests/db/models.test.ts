@@ -109,8 +109,17 @@ describe('sequelize models', () => {
     ]);
     expect(Equipment.getAttributes().serialNumber).toMatchObject({
       allowNull: false,
-      unique: 'equipment_serial_number_unique',
       field: 'serial_number',
+    });
+    expect(Equipment.options.paranoid).toBe(true);
+    expect(Equipment.getAttributes().deletedAt?.field).toBe('deleted_at');
+    expect(
+      Equipment.options.indexes?.find(
+        (index) => index.name === 'equipment_serial_number_active_idx',
+      ),
+    ).toMatchObject({
+      unique: true,
+      where: { deleted_at: null },
     });
     expect(Equipment.getAttributes().installationDate?.field).toBe('installation_date');
 
@@ -142,6 +151,8 @@ describe('sequelize models', () => {
       'high',
       'critical',
     ]);
+    expect(MaintenanceRequest.options.paranoid).toBe(true);
+    expect(MaintenanceRequest.getAttributes().deletedAt?.field).toBe('deleted_at');
     expect(enumValues(MaintenanceRequest, 'status')).toEqual([
       'new',
       'in_progress',

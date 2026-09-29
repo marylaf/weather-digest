@@ -79,17 +79,19 @@ npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
 
 ## Схема базы
 
-| Таблица                  | Содержание                                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------------------------- |
-| `sites`                  | Площадка: `name`, уникальный `code`, `region`, `latitude`, `longitude`                            |
-| `equipment`              | Единица: `site_id`, `name`, тип и статус (enum), уникальный `serial_number`, `installation_date`  |
-| `equipment_passports`    | Паспорт: `manufacturer`, `model`, `nominal_power`, `last_verification_date`. Один на оборудование |
-| `technicians`            | Специалист: `full_name`, `specialization`, уникальный `employee_number`                           |
-| `maintenance_requests`   | Заявка: `equipment_id`, `title`, `description`, `priority`, `status`, `planned_at`, `author`      |
-| `request_status_history` | Смена статуса: `old_status`, `new_status`, `changed_by`, `comment`. Строки только добавляются     |
-| `request_assignees`      | Назначение: пара `(request_id, technician_id)`, `role` (`lead` \| `member`), `hours`              |
+| Таблица                  | Содержание                                                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `sites`                  | Площадка: `name`, уникальный `code`, `region`, `latitude`, `longitude`                                     |
+| `equipment`              | Единица: `site_id`, `name`, тип и статус (enum), `serial_number`, `installation_date`, `deleted_at`        |
+| `equipment_passports`    | Паспорт: `manufacturer`, `model`, `nominal_power`, `last_verification_date`. Один на оборудование          |
+| `technicians`            | Специалист: `full_name`, `specialization`, уникальный `employee_number`                                    |
+| `maintenance_requests`   | Заявка: `equipment_id`, `title`, `description`, `priority`, `status`, `planned_at`, `author`, `deleted_at` |
+| `request_status_history` | Смена статуса: `old_status`, `new_status`, `changed_by`, `comment`. Строки только добавляются              |
+| `request_assignees`      | Назначение: пара `(request_id, technician_id)`, `role` (`lead` \| `member`), `hours`                       |
 
-У `request_status_history` триггер `request_status_history_forbid_mutation`: `UPDATE` и `DELETE` из SQL отклоняются. При удалении заявки сервис на время транзакции триггер выключает, стирает историю и включает обратно.
+У `request_status_history` триггер `request_status_history_forbid_mutation`: `UPDATE` и `DELETE` отклоняются. У роли приложения нет прав на эти команды. Скрытие заявки или оборудования ставит `deleted_at` и не трогает журнал.
+
+`serial_number` уникален среди строк с `deleted_at IS NULL` (частичный индекс `equipment_serial_number_active_idx`). После скрытия оборудования тот же серийный номер можно выдать снова.
 
 Связи:
 
@@ -237,7 +239,7 @@ curl -s http://localhost:3000/api/requests/e0000000-0000-4000-8000-000000000001/
 | `id`           | string         | UUID, выдаёт сервер                                                                                         |
 | `name`         | string         | 3–100 символов                                                                                              |
 | `type`         | enum           | `turbine` \| `inverter` \| `sensor` \| `substation`                                                         |
-| `serialNumber` | string         | не пустой, уникальный                                                                                       |
+| `serialNumber` | string         | не пустой, уникален среди нескрытого оборудования                                                           |
 | `location.lat` | number         | −90…90                                                                                                      |
 | `location.lon` | number         | −180…180                                                                                                    |
 | `status`       | enum           | `operational` \| `maintenance` \| `fault` \| `decommissioned`                                               |
@@ -299,7 +301,7 @@ stateDiagram-v2
 
 `DELETE /api/equipment/:id` при заявках `new` или `in_progress` возвращает `409` (`Equipment has open maintenance requests`). Внешний ключ `maintenance_requests.equipment_id` сам по себе `ON DELETE RESTRICT`, поэтому открытую заявку база тоже не даст обойти.
 
-Закрытые заявки (`done`, `rejected`) удалению не мешают: в той же транзакции сервис снимает их историю (триггер на это время выключен), назначения и сами заявки, затем строку оборудования. Паспорт уходит каскадом. Площадка остаётся.
+Закрытые заявки (`done`, `rejected`) удалению не мешают: в той же транзакции им и оборудованию проставляется `deleted_at`. Строки истории и назначений остаются. Паспорт и площадка остаются. Списки и отчёты такие строки не показывают. `GET` по прежнему id отвечает `404`.
 
 ## Отчёты
 
