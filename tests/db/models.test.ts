@@ -52,6 +52,17 @@ describe('sequelize models', () => {
         otherKey: 'technicianId',
       },
       RequestAssignees: { type: 'HasMany', target: 'RequestAssignee', foreignKey: 'requestId' },
+      SpareParts: {
+        type: 'BelongsToMany',
+        target: 'SparePart',
+        foreignKey: 'requestId',
+        otherKey: 'sparePartId',
+      },
+      RequestSpareParts: {
+        type: 'HasMany',
+        target: 'RequestSparePart',
+        foreignKey: 'requestId',
+      },
     });
     expect(describeAssociations(RequestStatusHistory)).toEqual({
       MaintenanceRequest: {

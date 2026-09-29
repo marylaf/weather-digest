@@ -1,4 +1,5 @@
 import type { SortOrder } from './equipment.js';
+import type { RequestSparePartLine } from './sparePart.js';
 
 export const REQUEST_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const;
 export type RequestPriority = (typeof REQUEST_PRIORITIES)[number];
@@ -40,6 +41,8 @@ export interface MaintenanceRequest {
   updatedAt: string;
   /** Present on a single request. List payloads keep the previous shape. */
   assignedTechnicians?: AssignedTechnician[];
+  /** Present on a single request together with assignedTechnicians. */
+  spareParts?: RequestSparePartLine[];
 }
 
 export interface CreateRequestInput {

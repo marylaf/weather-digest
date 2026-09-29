@@ -1,6 +1,7 @@
 import { Op, literal, type Order, type Transaction, type WhereOptions } from 'sequelize';
 import { ConflictError } from '../../errors/httpErrors.js';
 import { OPEN_REQUEST_STATUSES, REQUEST_SORT_FIELDS } from '../../types/request.js';
+import type { RequestSparePartLine } from '../../types/sparePart.js';
 import type {
   AssignedTechnician,
   AssigneeInput,
@@ -14,6 +15,7 @@ import type {
 import { MaintenanceRequest as MaintenanceRequestModel } from '../../db/models/maintenanceRequest.js';
 import { RequestAssignee } from '../../db/models/requestAssignee.js';
 import { RequestStatusHistory } from '../../db/models/requestStatusHistory.js';
+import { SparePart } from '../../db/models/sparePart.js';
 import { Technician } from '../../db/models/technician.js';
 import { ensureDb, isUuid } from './db.js';
 import {
@@ -357,6 +359,11 @@ function requestDetailQuery() {
         attributes: [...TECHNICIAN_ATTRIBUTES],
         through: { attributes: ['role', 'hours'] },
       },
+      {
+        model: SparePart,
+        attributes: ['id', 'name', 'sku'],
+        through: { attributes: ['quantity'] },
+      },
     ],
     order: [[{ model: Technician, as: 'Technicians' }, 'fullName', 'ASC']] as Order,
   };
@@ -446,6 +453,7 @@ function toRequest(row: MaintenanceRequestModel, withAssignees: boolean): Mainte
     request.assignedTechnicians = (row.Technicians ?? []).map((technician) =>
       toAssignedTechnician(technician),
     );
+    request.spareParts = (row.SpareParts ?? []).map((part) => toSparePartLine(part));
   }
 
   return request;
@@ -462,6 +470,30 @@ function toAssignedTechnician(technician: Technician): AssignedTechnician {
     role: assignment.role,
     hours: assignment.hours,
   };
+}
+
+function toSparePartLine(part: SparePart): RequestSparePartLine {
+  const source = part as SparePart & { RequestSparePart?: { quantity?: unknown } };
+  const quantity = source.RequestSparePart?.quantity;
+
+  return {
+    id: part.id,
+    name: part.name,
+    sku: part.sku,
+    quantity: formatQuantity(quantity),
+  };
+}
+
+function formatQuantity(value: unknown): string {
+  if (typeof value === 'string' && value.length > 0) {
+    return value;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toFixed(2);
+  }
+
+  return '0.00';
 }
 
 function readAssignment(technician: Technician): { role: 'lead' | 'member'; hours: string } {

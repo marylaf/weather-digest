@@ -45,7 +45,7 @@ docker compose up -d --wait postgres
 npm run db:migrate
 ```
 
-Порядок: `sites`, `equipment`, `equipment_passports`, `technicians`, `maintenance_requests`, `request_status_history`, `request_assignees`.
+Порядок: `sites`, `equipment`, `equipment_passports`, `technicians`, `maintenance_requests`, `request_status_history`, `request_assignees`, затем `deleted_at` и частичный уникальный `serial_number`, права роли приложения, индексы поиска, `spare_parts` и `request_spare_parts`.
 
 ### Сиды
 
@@ -90,6 +90,8 @@ npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
 | `maintenance_requests`   | Заявка: `equipment_id`, `title`, `description`, `priority`, `status`, `planned_at`, `author`, `deleted_at` |
 | `request_status_history` | Смена статуса: `old_status`, `new_status`, `changed_by`, `comment`. Строки только добавляются              |
 | `request_assignees`      | Назначение: пара `(request_id, technician_id)`, `role` (`lead` \| `member`), `hours`                       |
+| `spare_parts`            | Запчасть: `name`, `sku` (уникален при `deleted_at IS NULL`), `stock_quantity`, `deleted_at`                |
+| `request_spare_parts`    | Расход: пара `(request_id, spare_part_id)`, `quantity`                                                     |
 
 У `request_status_history` триггер `request_status_history_forbid_mutation`: `UPDATE` и `DELETE` отклоняются. У роли приложения нет прав на эти команды. Скрытие заявки или оборудования ставит `deleted_at` и не трогает журнал.
 
@@ -101,7 +103,8 @@ npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
 - оборудование — паспорт, не больше одного (`equipment_passports.equipment_id` уникален, `ON DELETE CASCADE`); паспорта может не быть;
 - оборудование — заявки, 1:N (`ON DELETE RESTRICT`);
 - заявка — история статусов, 1:N (`ON DELETE RESTRICT`);
-- заявка — техники, N:M через `request_assignees`. У заявки не больше одного `lead`: частичный уникальный индекс `request_assignees_one_lead_per_request`.
+- заявка — техники, N:M через `request_assignees`. У заявки не больше одного `lead`: частичный уникальный индекс `request_assignees_one_lead_per_request`;
+- заявка — запчасти, N:M через `request_spare_parts` (`quantity`). Списание остатка и вставка строки идут в одной транзакции. `sku` уникален при `deleted_at IS NULL`.
 
 ```mermaid
 erDiagram
@@ -111,6 +114,8 @@ erDiagram
   maintenance_requests ||--o{ request_status_history : "request_id"
   maintenance_requests ||--o{ request_assignees : "request_id"
   technicians ||--o{ request_assignees : "technician_id"
+  maintenance_requests ||--o{ request_spare_parts : "request_id"
+  spare_parts ||--o{ request_spare_parts : "spare_part_id"
 ```
 
 Площадка не копируется в каждую строку `equipment`: там только `site_id`. Паспорт — отдельная таблица, а не те же поля внутри оборудования. Техник описан в `technicians` один раз, в заявке на него ссылается `request_assignees` (роль и часы). Смены статуса лежат в `request_status_history`, а не колонками на заявке. Повторяющихся групп нет — схема в 3NF.
@@ -132,12 +137,17 @@ erDiagram
 | `GET`    | `/api/requests`                       | нет  | `200`         | Список заявок. Query: `status`, `priority`, `equipmentId`, `createdFrom`, `createdTo`, `q`, `sortBy`, `order`, `page`, `limit` |
 | `POST`   | `/api/requests`                       | да   | `201`         | Создать заявку (`status` всегда `new`). `Location: /api/requests/:id`                                                          |
 | `POST`   | `/api/requests/import`                | да   | `201` / `207` | Пакетная загрузка: ошибки по записям не откатывают успешные. До 100 элементов                                                  |
-| `GET`    | `/api/requests/:id`                   | нет  | `200`         | Карточка заявки, включая `assignedTechnicians`                                                                                 |
+| `GET`    | `/api/requests/:id`                   | нет  | `200`         | Карточка заявки, включая `assignedTechnicians` и `spareParts`                                                                  |
 | `POST`   | `/api/requests/:id/assignees`         | да   | `200`         | Заменить бригаду целиком. Ровно один `lead`                                                                                    |
 | `DELETE` | `/api/requests/:id/assignees/:userId` | да   | `204`         | Снять одного техника. `:userId` — это `technicians.id`                                                                         |
 | `GET`    | `/api/requests/:id/history`           | нет  | `200`         | История смен статуса, по `createdAt`                                                                                           |
 | `GET`    | `/api/sites/:id/summary`              | нет  | `200`         | Сводка заявок площадки: счётчики по статусу и приоритету, среднее время закрытия                                               |
 | `GET`    | `/api/reports/equipment-load`         | нет  | `200`         | Нагрузка оборудования. Query: `createdFrom`, `createdTo`, `minRequests`                                                        |
+| `GET`    | `/api/spare-parts`                    | нет  | `200`         | Список запчастей. Query: `q`, `sortBy`, `order`, `page`, `limit`                                                               |
+| `POST`   | `/api/spare-parts`                    | да   | `201`         | Создать запчасть. `sku` уникален среди нескрытых                                                                               |
+| `GET`    | `/api/spare-parts/:id`                | нет  | `200`         | Карточка запчасти                                                                                                              |
+| `DELETE` | `/api/spare-parts/:id`                | да   | `204`         | Скрыть запчасть. Тот же `sku` можно создать снова                                                                              |
+| `POST`   | `/api/requests/:id/spare-parts`       | да   | `200`         | Списать запчасть на заявку. Нехватка остатка или повтор пары — `409`                                                           |
 | `PATCH`  | `/api/requests/:id`                   | да   | `200`         | Поля заявки без смены статуса                                                                                                  |
 | `PATCH`  | `/api/requests/:id/status`            | да   | `200`         | Смена статуса по графу переходов                                                                                               |
 | `DELETE` | `/api/requests/:id`                   | да   | `204`         | Удалить заявку                                                                                                                 |
@@ -298,6 +308,8 @@ stateDiagram-v2
 Замена бригады тоже под блокировкой строки заявки: старые назначения удаляются, новые вставляются. Если в теле не ровно один `lead`, ответ `422` (`В бригаде должен быть ровно один специалист с ролью lead`) и в базу ничего не пишется. Повтор техника и нарушение уникального индекса — `409`, изменения откатываются.
 
 Снятие одного назначения — отдельная короткая транзакция. Оно не проверяет, остался ли `lead`.
+
+`POST /api/requests/:id/spare-parts` блокирует заявку и строку запчасти, уменьшает `stock_quantity` и вставляет `request_spare_parts`. Если остатка меньше `quantity` или пара уже есть, ответ `409` и остаток не меняется. Проверка `stock_quantity >= 0` стоит и в схеме.
 
 ## Удаление оборудования
 

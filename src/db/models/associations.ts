@@ -1,4 +1,6 @@
 import { Equipment } from './equipment.js';
+import { RequestSparePart } from './requestSparePart.js';
+import { SparePart } from './sparePart.js';
 import { EquipmentPassport } from './equipmentPassport.js';
 import { MaintenanceRequest } from './maintenanceRequest.js';
 import { RequestAssignee } from './requestAssignee.js';
@@ -90,6 +92,41 @@ export function applyAssociations(): void {
   });
   RequestAssignee.belongsTo(Technician, {
     foreignKey: 'technicianId',
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+
+  MaintenanceRequest.belongsToMany(SparePart, {
+    through: { model: RequestSparePart, unique: false },
+    foreignKey: 'requestId',
+    otherKey: 'sparePartId',
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  SparePart.belongsToMany(MaintenanceRequest, {
+    through: { model: RequestSparePart, unique: false },
+    foreignKey: 'sparePartId',
+    otherKey: 'requestId',
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  MaintenanceRequest.hasMany(RequestSparePart, {
+    foreignKey: 'requestId',
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  SparePart.hasMany(RequestSparePart, {
+    foreignKey: 'sparePartId',
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  RequestSparePart.belongsTo(MaintenanceRequest, {
+    foreignKey: 'requestId',
+    onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+  RequestSparePart.belongsTo(SparePart, {
+    foreignKey: 'sparePartId',
     onDelete: 'RESTRICT',
     onUpdate: 'CASCADE',
   });

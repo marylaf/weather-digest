@@ -12,7 +12,9 @@ import {
 import { REQUEST_PRIORITIES, REQUEST_STATUSES } from '../../types/request.js';
 import type { Equipment } from './equipment.js';
 import type { RequestAssignee } from './requestAssignee.js';
+import type { RequestSparePart } from './requestSparePart.js';
 import type { RequestStatusHistory } from './requestStatusHistory.js';
+import type { SparePart } from './sparePart.js';
 import type { Technician } from './technician.js';
 
 /**
@@ -39,6 +41,8 @@ export class MaintenanceRequest extends Model<
   declare RequestStatusHistories?: NonAttribute<RequestStatusHistory[]>;
   declare Technicians?: NonAttribute<Technician[]>;
   declare RequestAssignees?: NonAttribute<RequestAssignee[]>;
+  declare SpareParts?: NonAttribute<SparePart[]>;
+  declare RequestSpareParts?: NonAttribute<RequestSparePart[]>;
 }
 
 export function initMaintenanceRequestModel(sequelize: Sequelize): void {

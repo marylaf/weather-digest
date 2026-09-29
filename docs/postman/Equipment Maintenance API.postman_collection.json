@@ -2700,6 +2700,166 @@
       ]
     },
     {
+      "name": "Spare Parts",
+      "item": [
+        {
+          "name": "Create Spare Part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set(\"sparePartId\", body.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Подшипник\",\n  \"sku\": \"BRG-POSTMAN\",\n  \"stockQuantity\": 5\n}"
+            },
+            "url": "{{baseUrl}}/api/spare-parts"
+          }
+        },
+        {
+          "name": "Duplicate SKU",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Conflict code\", () => {",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"CONFLICT\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Подшипник повтор\",\n  \"sku\": \"BRG-POSTMAN\",\n  \"stockQuantity\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/spare-parts"
+          }
+        },
+        {
+          "name": "Issue Spare Part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Request lists the issued part\", () => {",
+                  "    const line = pm.response.json().data.spareParts[0];",
+                  "    pm.expect(line.quantity).to.eql(\"2.00\");",
+                  "    pm.expect(line.sku).to.eql(\"BRG-POSTMAN\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sparePartId\": \"{{sparePartId}}\",\n  \"quantity\": 2\n}"
+            },
+            "url": "{{baseUrl}}/api/requests/{{requestId}}/spare-parts"
+          }
+        },
+        {
+          "name": "Issue Unknown Spare Part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sparePartId\": \"00000000-0000-4000-8000-000000000099\",\n  \"quantity\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/requests/{{requestId}}/spare-parts"
+          }
+        },
+        {
+          "name": "Issue More Than Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Conflict code\", () => {",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"CONFLICT\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sparePartId\": \"{{sparePartId}}\",\n  \"quantity\": 10\n}"
+            },
+            "url": "{{baseUrl}}/api/requests/{{requestId}}/spare-parts"
+          }
+        }
+      ],
+      "description": "Списание запчастей. Нужны requestId из папки Requests и ключ API."
+    },
+    {
       "name": "Security",
       "item": [
         {
