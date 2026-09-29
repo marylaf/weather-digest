@@ -1,6 +1,12 @@
+import { jest } from '@jest/globals';
 import { MAX_REQUEST_IMPORT_ITEMS } from '../../src/config/constants.js';
 import { getSequelize } from '../../src/db/database.js';
-import { initModels, RequestAssignee, Technician } from '../../src/db/models/index.js';
+import {
+  initModels,
+  RequestAssignee,
+  RequestStatusHistory,
+  Technician,
+} from '../../src/db/models/index.js';
 import { requestPayload } from '../helpers/fixtures.js';
 import {
   api,
@@ -10,6 +16,30 @@ import {
   withApiKey,
 } from '../helpers/http.js';
 import { resetStore } from '../helpers/store.js';
+
+async function createTechnician(employeeNumber: string): Promise<Technician> {
+  initModels(getSequelize());
+  return Technician.create({
+    fullName: `Техник ${employeeNumber}`,
+    specialization: 'Электрика',
+    employeeNumber,
+  });
+}
+
+async function assignBrigade(
+  requestId: string,
+  technicians: { id: string; role: 'lead' | 'member'; hours?: string | number }[],
+) {
+  return withApiKey(api().post(`/api/requests/${requestId}/assignees`))
+    .send({
+      assignees: technicians.map((technician) => ({
+        technicianId: technician.id,
+        role: technician.role,
+        ...(technician.hours === undefined ? {} : { hours: technician.hours }),
+      })),
+    })
+    .expect(200);
+}
 
 describe('/api/requests', () => {
   beforeEach(async () => {
@@ -47,7 +77,7 @@ describe('/api/requests', () => {
     await createRequest(equipment.id, { title: 'First open request' });
     const second = await createRequest(equipment.id, { title: 'Second open request' });
     await withApiKey(api().patch(`/api/requests/${second.id}/status`))
-      .send({ status: 'in_progress' })
+      .send({ status: 'rejected' })
       .expect(200);
 
     const response = await api().get('/api/requests').query({ status: 'new' }).expect(200);
@@ -76,9 +106,11 @@ describe('/api/requests', () => {
   it('переводит заявку по допустимому статусу', async () => {
     const equipment = await createEquipment();
     const requestItem = await createRequest(equipment.id);
+    const lead = await createTechnician('lead-transition');
+    await assignBrigade(requestItem.id, [{ id: lead.id, role: 'lead' }]);
 
     const inProgress = await withApiKey(api().patch(`/api/requests/${requestItem.id}/status`))
-      .send({ status: 'in_progress' })
+      .send({ status: 'in_progress', comment: 'Бригада выехала' })
       .expect(200);
     expect(inProgress.body.data.status).toBe('in_progress');
 
@@ -86,6 +118,39 @@ describe('/api/requests', () => {
       .send({ status: 'done' })
       .expect(200);
     expect(done.body.data.status).toBe('done');
+
+    const history = await api().get(`/api/requests/${requestItem.id}/history`).expect(200);
+    expect(history.body.data).toEqual([
+      expect.objectContaining({
+        requestId: requestItem.id,
+        oldStatus: 'new',
+        newStatus: 'in_progress',
+        changedBy: 'api',
+        comment: 'Бригада выехала',
+      }),
+      expect.objectContaining({
+        requestId: requestItem.id,
+        oldStatus: 'in_progress',
+        newStatus: 'done',
+        changedBy: 'api',
+        comment: null,
+      }),
+    ]);
+  });
+
+  it('не переводит заявку в in_progress без назначенных специалистов', async () => {
+    const equipment = await createEquipment();
+    const requestItem = await createRequest(equipment.id);
+
+    const response = await withApiKey(api().patch(`/api/requests/${requestItem.id}/status`)).send({
+      status: 'in_progress',
+    });
+
+    expectApiError(response, 409, 'CONFLICT');
+    const fetched = await api().get(`/api/requests/${requestItem.id}`).expect(200);
+    expect(fetched.body.data.status).toBe('new');
+    const history = await api().get(`/api/requests/${requestItem.id}/history`).expect(200);
+    expect(history.body.data).toEqual([]);
   });
 
   it('запрещает недопустимый переход статуса', async () => {
@@ -159,6 +224,156 @@ describe('/api/requests', () => {
     });
 
     expectApiError(response, 422, 'VALIDATION_ERROR');
+  });
+
+  describe('бригада и история статусов', () => {
+    it('заменяет бригаду и оставляет ровно одного lead', async () => {
+      const equipment = await createEquipment();
+      const requestItem = await createRequest(equipment.id, { title: 'Brigade request' });
+      const lead = await createTechnician('lead-brigade');
+      const member = await createTechnician('member-brigade');
+
+      const response = await assignBrigade(requestItem.id, [
+        { id: lead.id, role: 'lead', hours: 1.5 },
+        { id: member.id, role: 'member', hours: '2.00' },
+      ]);
+
+      expect(response.body.data.assignedTechnicians).toEqual([
+        expect.objectContaining({ id: lead.id, role: 'lead', hours: '1.50' }),
+        expect.objectContaining({ id: member.id, role: 'member', hours: '2.00' }),
+      ]);
+
+      const replacement = await createTechnician('lead-replacement');
+      const replaced = await assignBrigade(requestItem.id, [{ id: replacement.id, role: 'lead' }]);
+      expect(replaced.body.data.assignedTechnicians).toEqual([
+        expect.objectContaining({ id: replacement.id, role: 'lead' }),
+      ]);
+    });
+
+    it('отклоняет бригаду без единственного lead и с повтором специалиста', async () => {
+      const equipment = await createEquipment();
+      const requestItem = await createRequest(equipment.id);
+      const lead = await createTechnician('lead-invalid');
+      const member = await createTechnician('member-invalid');
+
+      const twoLeads = await withApiKey(
+        api().post(`/api/requests/${requestItem.id}/assignees`),
+      ).send({
+        assignees: [
+          { technicianId: lead.id, role: 'lead' },
+          { technicianId: member.id, role: 'lead' },
+        ],
+      });
+      expectApiError(twoLeads, 422, 'VALIDATION_ERROR');
+
+      const duplicate = await withApiKey(
+        api().post(`/api/requests/${requestItem.id}/assignees`),
+      ).send({
+        assignees: [
+          { technicianId: lead.id, role: 'lead' },
+          { technicianId: lead.id, role: 'member' },
+        ],
+      });
+      expectApiError(duplicate, 422, 'VALIDATION_ERROR');
+
+      const fetched = await api().get(`/api/requests/${requestItem.id}`).expect(200);
+      expect(fetched.body.data.assignedTechnicians).toEqual([]);
+    });
+
+    it('возвращает 404, если заявка или специалист не найдены', async () => {
+      const equipment = await createEquipment();
+      const requestItem = await createRequest(equipment.id);
+      const lead = await createTechnician('lead-missing');
+
+      const missingRequest = await withApiKey(
+        api().post('/api/requests/00000000-0000-4000-8000-000000000001/assignees'),
+      ).send({
+        assignees: [{ technicianId: lead.id, role: 'lead' }],
+      });
+      expectApiError(missingRequest, 404, 'NOT_FOUND');
+
+      const missingTechnician = await withApiKey(
+        api().post(`/api/requests/${requestItem.id}/assignees`),
+      ).send({
+        assignees: [{ technicianId: '00000000-0000-4000-8000-000000000002', role: 'lead' }],
+      });
+      expectApiError(missingTechnician, 404, 'NOT_FOUND');
+    });
+
+    it('снимает специалиста, в том числе lead, и не требует нового lead', async () => {
+      const equipment = await createEquipment();
+      const requestItem = await createRequest(equipment.id);
+      const lead = await createTechnician('lead-remove');
+      const member = await createTechnician('member-remove');
+      await assignBrigade(requestItem.id, [
+        { id: lead.id, role: 'lead' },
+        { id: member.id, role: 'member' },
+      ]);
+
+      await withApiKey(api().delete(`/api/requests/${requestItem.id}/assignees/${lead.id}`)).expect(
+        204,
+      );
+
+      const fetched = await api().get(`/api/requests/${requestItem.id}`).expect(200);
+      expect(fetched.body.data.assignedTechnicians).toEqual([
+        expect.objectContaining({ id: member.id, role: 'member' }),
+      ]);
+
+      const missingAssignment = await withApiKey(
+        api().delete(`/api/requests/${requestItem.id}/assignees/${lead.id}`),
+      );
+      expectApiError(missingAssignment, 404, 'NOT_FOUND');
+    });
+
+    it('откатывает статус, если запись истории падает', async () => {
+      const equipment = await createEquipment();
+      const requestItem = await createRequest(equipment.id);
+      const createHistory = jest
+        .spyOn(RequestStatusHistory, 'create')
+        .mockRejectedValueOnce(new Error('history insert failed'));
+
+      try {
+        const response = await withApiKey(
+          api().patch(`/api/requests/${requestItem.id}/status`),
+        ).send({ status: 'rejected' });
+        expect(response.status).toBe(500);
+      } finally {
+        createHistory.mockRestore();
+      }
+
+      const fetched = await api().get(`/api/requests/${requestItem.id}`).expect(200);
+      expect(fetched.body.data.status).toBe('new');
+      const history = await api().get(`/api/requests/${requestItem.id}/history`).expect(200);
+      expect(history.body.data).toEqual([]);
+    });
+
+    it('откатывает замену бригады, если вставка назначений падает', async () => {
+      const equipment = await createEquipment();
+      const requestItem = await createRequest(equipment.id);
+      const lead = await createTechnician('lead-rollback');
+      const replacement = await createTechnician('lead-rollback-next');
+      await assignBrigade(requestItem.id, [{ id: lead.id, role: 'lead', hours: '3.00' }]);
+
+      const bulkCreate = jest
+        .spyOn(RequestAssignee, 'bulkCreate')
+        .mockRejectedValueOnce(new Error('assignee insert failed'));
+
+      try {
+        const response = await withApiKey(
+          api().post(`/api/requests/${requestItem.id}/assignees`),
+        ).send({
+          assignees: [{ technicianId: replacement.id, role: 'lead', hours: '1.00' }],
+        });
+        expect(response.status).toBe(500);
+      } finally {
+        bulkCreate.mockRestore();
+      }
+
+      const fetched = await api().get(`/api/requests/${requestItem.id}`).expect(200);
+      expect(fetched.body.data.assignedTechnicians).toEqual([
+        expect.objectContaining({ id: lead.id, role: 'lead', hours: '3.00' }),
+      ]);
+    });
   });
 
   it('возвращает 404 для неизвестной заявки', async () => {
