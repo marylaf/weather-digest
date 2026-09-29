@@ -26,18 +26,44 @@ async function main() {
   await client.connect();
 
   try {
-    const existing = await client.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [appUser]);
+    await withRoleLock(client, async () => {
+      const existing = await client.query('SELECT 1 FROM pg_roles WHERE rolname = $1', [appUser]);
 
-    if (existing.rowCount === 0) {
-      await client.query(`CREATE ROLE "${appUser}" LOGIN PASSWORD ${appPassword}`);
-    } else {
-      await client.query(`ALTER ROLE "${appUser}" WITH LOGIN PASSWORD ${appPassword}`);
-    }
+      if (existing.rowCount === 0) {
+        await client.query(`CREATE ROLE "${appUser}" LOGIN PASSWORD ${appPassword}`);
+      }
 
-    await client.query(`GRANT CONNECT ON DATABASE "${database}" TO "${appUser}"`);
-    await client.query(`GRANT USAGE ON SCHEMA public TO "${appUser}"`);
+      await client.query(`GRANT CONNECT ON DATABASE "${database}" TO "${appUser}"`);
+      await client.query(`GRANT USAGE ON SCHEMA public TO "${appUser}"`);
+    });
   } finally {
     await client.end();
+  }
+}
+
+async function withRoleLock(client, work) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await client.query('SELECT pg_advisory_lock(84215045)');
+
+      try {
+        await work();
+      } finally {
+        await client.query('SELECT pg_advisory_unlock(84215045)');
+      }
+
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (!/tuple concurrently updated|duplicate key value/i.test(message) || attempt === 4) {
+        throw error;
+      }
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 40 * (attempt + 1));
+      });
+    }
   }
 }
 
