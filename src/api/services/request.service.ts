@@ -208,9 +208,9 @@ export async function updateRequestStatus(
 }
 
 /**
- * Заменяет бригаду целиком. В новой бригаде ровно один `lead`.
- * Повтор technicianId в теле — 422 до записи, unique `(request_id, technician_id)`
- * страхует гонку: исключение переводится в 422, транзакция откатывается.
+ * Заменяет бригаду целиком. В новой бригаде ровно один `lead` (422).
+ * Повтор technicianId — 409 до записи. Уникальный индекс пары
+ * `(request_id, technician_id)` страхует гонку и тоже даёт 409 с откатом.
  */
 export async function replaceRequestAssignees(
   id: string,
@@ -235,12 +235,7 @@ export async function replaceRequestAssignees(
       await requestRepository.replaceAssignees(id, payload.assignees, transaction);
     } catch (error) {
       if (isUniqueConstraint(error)) {
-        throw new ValidationError([
-          {
-            field: 'assignees',
-            message: 'Состав бригады нарушает ограничение уникальности',
-          },
-        ]);
+        throw new ConflictError('Technician is already assigned to this request');
       }
 
       throw error;
@@ -347,10 +342,7 @@ function assertBrigade(assignees: readonly AssigneeInput[]): void {
   const technicianIds = assignees.map((assignee) => assignee.technicianId);
 
   if (new Set(technicianIds).size !== technicianIds.length) {
-    details.push({
-      field: 'assignees',
-      message: 'Один специалист не может быть назначен дважды',
-    });
+    throw new ConflictError('Technician is already assigned to this request');
   }
 
   if (details.length > 0) {

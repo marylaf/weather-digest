@@ -274,7 +274,7 @@ describe('/api/requests', () => {
           { technicianId: lead.id, role: 'member' },
         ],
       });
-      expectApiError(duplicate, 422, 'VALIDATION_ERROR');
+      expectApiError(duplicate, 409, 'CONFLICT');
 
       const fetched = await api().get(`/api/requests/${requestItem.id}`).expect(200);
       expect(fetched.body.data.assignedTechnicians).toEqual([]);

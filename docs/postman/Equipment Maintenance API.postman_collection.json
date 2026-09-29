@@ -849,7 +849,7 @@
                 "requests"
               ]
             },
-            "description": "Отдельная заявка для сценариев бригады, чтобы не переписывать основную заявку Кейса 2."
+            "description": "Отдельная заявка для сценариев бригады, чтобы не переписывать основную заявку."
           },
           "response": []
         },
@@ -992,8 +992,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 422\", () => {",
-                  "    pm.response.to.have.status(422);",
+                  "pm.test(\"Status code is 409\", () => {",
+                  "    pm.response.to.have.status(409);",
                   "});",
                   "",
                   "pm.test(\"Content-Type is JSON\", () => {",
@@ -1004,14 +1004,9 @@
                   "    const body = pm.response.json();",
                   "",
                   "    pm.expect(body).to.have.property(\"error\");",
-                  "    pm.expect(body.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "    pm.expect(body.error.code).to.eql(\"CONFLICT\");",
                   "    pm.expect(body.error).to.have.property(\"message\");",
                   "    pm.expect(body.error).to.have.property(\"requestId\");",
-                  "});",
-                  "",
-                  "pm.test(\"Duplicate technician is rejected before write\", () => {",
-                  "    const body = pm.response.json();",
-                  "    pm.expect(body.error.details).to.be.an(\"array\").that.is.not.empty;",
                   "});"
                 ]
               }
@@ -1050,7 +1045,7 @@
                 "assignees"
               ]
             },
-            "description": "Повтор technicianId в одном теле — 422. Гонка unique (request_id, technician_id) тоже переводится в 422, поэтому отдельный 409 для дубля не применяется."
+            "description": "Повтор technicianId в одном теле — 409. Гонка unique (request_id, technician_id) тоже переводится в 409, транзакция откатывается."
           },
           "response": []
         },
