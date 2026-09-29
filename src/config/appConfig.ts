@@ -1,7 +1,6 @@
 import type { AppConfig } from '../types/config.js';
 import {
   DEFAULT_CORS_ORIGINS,
-  DEFAULT_EQUIPMENT_FILE,
   DEFAULT_FORECAST_URL,
   DEFAULT_GEOCODING_URL,
   DEFAULT_JSON_BODY_LIMIT,
@@ -10,7 +9,6 @@ import {
   DEFAULT_PORT,
   DEFAULT_RATE_LIMIT_MAX,
   DEFAULT_RATE_LIMIT_WINDOW_MS,
-  DEFAULT_REQUESTS_FILE,
   DEFAULT_TIMEOUT_MS,
   REPORTS_DIR,
 } from './constants.js';
@@ -29,8 +27,6 @@ export function loadConfig(): AppConfig {
     units: parseUnits(process.env.UNITS),
     port: Number(process.env.PORT) || DEFAULT_PORT,
     nodeEnv: process.env.NODE_ENV || DEFAULT_NODE_ENV,
-    equipmentFile: process.env.EQUIPMENT_FILE || DEFAULT_EQUIPMENT_FILE,
-    requestsFile: process.env.REQUESTS_FILE || DEFAULT_REQUESTS_FILE,
     corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS),
     rateLimitWindowMs: parsePositiveInt(
       process.env.RATE_LIMIT_WINDOW_MS,

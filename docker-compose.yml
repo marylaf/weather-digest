@@ -17,15 +17,12 @@ services:
     env_file:
       - .env
     environment:
-      EQUIPMENT_FILE: /app/data/equipment.json
-      REQUESTS_FILE: /app/data/requests.json
       DB_HOST: postgres
       DB_PORT: '5432'
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
-      - ./data:/app/data
       - ./public:/app/public
 
   postgres:
