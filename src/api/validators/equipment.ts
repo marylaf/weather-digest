@@ -47,6 +47,7 @@ export const equipmentListQuerySchema = z.object({
   type: z.enum(EQUIPMENT_TYPES, { error: 'Недопустимое значение' }).optional(),
   installedFrom: isoDateSchema.optional(),
   installedTo: isoDateSchema.optional(),
+  q: z.string().trim().min(1).max(100).optional(),
   sortBy: z.enum(EQUIPMENT_SORT_FIELDS, { error: 'Недопустимое значение' }).optional(),
   order: sortOrderQuerySchema,
   page: pageQuerySchema,

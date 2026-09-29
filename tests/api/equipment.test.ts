@@ -179,6 +179,34 @@ describe('/api/equipment', () => {
     expectApiError(missing, 404, 'NOT_FOUND');
   });
 
+  it('снова принимает serialNumber после скрытия оборудования', async () => {
+    const payload = equipmentPayload({ serialNumber: 'SN-SOFT-1' });
+    const created = await withApiKey(api().post('/api/equipment')).send(payload).expect(201);
+    await withApiKey(api().delete(`/api/equipment/${created.body.data.id}`)).expect(204);
+
+    const again = await withApiKey(api().post('/api/equipment')).send(payload).expect(201);
+    expect(again.body.data.serialNumber).toBe('SN-SOFT-1');
+    expect(again.body.data.id).not.toBe(created.body.data.id);
+  });
+
+  it('ищет оборудование по фрагменту названия без учёта регистра', async () => {
+    await createEquipment({ name: 'Северная турбина', serialNumber: 'SN-SEARCH-1' });
+    await createEquipment({
+      name: 'Южный инвертор',
+      serialNumber: 'SN-SEARCH-2',
+      type: 'inverter',
+    });
+
+    const found = await api().get('/api/equipment').query({ q: 'северн' }).expect(200);
+    expect(found.body.data).toEqual([
+      expect.objectContaining({ name: 'Северная турбина', serialNumber: 'SN-SEARCH-1' }),
+    ]);
+    expect(found.body.meta.total).toBe(1);
+
+    const literal = await api().get('/api/equipment').query({ q: '%' }).expect(200);
+    expect(literal.body.meta.total).toBe(0);
+  });
+
   it('возвращает заявки по оборудованию', async () => {
     const equipment = await createEquipment();
     const requestItem = await createRequest(equipment.id, { title: 'Check inverter fans' });

@@ -12,7 +12,9 @@ import {
 import { REQUEST_PRIORITIES, REQUEST_STATUSES } from '../../types/request.js';
 import type { Equipment } from './equipment.js';
 import type { RequestAssignee } from './requestAssignee.js';
+import type { RequestSparePart } from './requestSparePart.js';
 import type { RequestStatusHistory } from './requestStatusHistory.js';
+import type { SparePart } from './sparePart.js';
 import type { Technician } from './technician.js';
 
 /**
@@ -33,11 +35,14 @@ export class MaintenanceRequest extends Model<
   declare author: string;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
+  declare deletedAt: CreationOptional<Date | null>;
 
   declare Equipment?: NonAttribute<Equipment>;
   declare RequestStatusHistories?: NonAttribute<RequestStatusHistory[]>;
   declare Technicians?: NonAttribute<Technician[]>;
   declare RequestAssignees?: NonAttribute<RequestAssignee[]>;
+  declare SpareParts?: NonAttribute<SparePart[]>;
+  declare RequestSpareParts?: NonAttribute<RequestSparePart[]>;
 }
 
 export function initMaintenanceRequestModel(sequelize: Sequelize): void {
@@ -95,6 +100,11 @@ export function initMaintenanceRequestModel(sequelize: Sequelize): void {
         allowNull: false,
         field: 'updated_at',
       },
+      deletedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'deleted_at',
+      },
     },
     {
       sequelize,
@@ -103,10 +113,26 @@ export function initMaintenanceRequestModel(sequelize: Sequelize): void {
       freezeTableName: true,
       underscored: true,
       timestamps: true,
+      paranoid: true,
       indexes: [
         {
           name: 'maintenance_requests_equipment_id_idx',
           fields: ['equipment_id'],
+        },
+        {
+          name: 'maintenance_requests_deleted_at_idx',
+          fields: ['deleted_at'],
+        },
+        {
+          name: 'maintenance_requests_status_created_at_idx',
+          fields: ['status', 'created_at'],
+          where: { deleted_at: null },
+        },
+        {
+          name: 'maintenance_requests_title_trgm_idx',
+          fields: ['title'],
+          using: 'GIN',
+          where: { deleted_at: null },
         },
       ],
     },

@@ -6,7 +6,9 @@ import type {
   RequestStatus,
   UpdateRequestInput,
 } from '../../types/request.js';
+import type { IssueSparePartInput } from '../../types/sparePart.js';
 import * as requestService from '../services/request.service.js';
+import * as sparePartService from '../services/sparePart.service.js';
 
 export async function listRequests(req: Request, res: Response): Promise<void> {
   const result = await requestService.listRequests(req.query as RequestListQuery);
@@ -61,6 +63,14 @@ export async function removeAssignee(req: Request, res: Response): Promise<void>
 
 export async function listRequestHistory(req: Request, res: Response): Promise<void> {
   const data = await requestService.listRequestStatusHistory(req.params.id as string);
+  res.status(200).json({ data });
+}
+
+export async function issueSparePart(req: Request, res: Response): Promise<void> {
+  const data = await sparePartService.issueSparePart(
+    req.params.id as string,
+    req.body as IssueSparePartInput,
+  );
   res.status(200).json({ data });
 }
 

@@ -71,6 +71,11 @@ export function resolveSortOrder(order: string | undefined): SortOrder {
   return resolved;
 }
 
+/** Pattern for ILIKE. `%`, `_` and `\` in the user text stay literal. */
+export function containsPattern(value: string): string {
+  return `%${value.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+}
+
 function paginationError(field: string, message: string): ValidationError {
   return new ValidationError([{ field, message }], 'Некорректные данные запроса', 400);
 }

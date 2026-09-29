@@ -21,6 +21,8 @@ fillEnv('DB_HOST', '127.0.0.1');
 fillEnv('DB_PORT', '5432');
 fillEnv('DB_USER', 'weather_digest');
 fillEnv('DB_PASSWORD', 'change_me');
+fillEnv('DB_APP_USER', 'weather_digest_app');
+fillEnv('DB_APP_PASSWORD', 'change_me_app');
 fillEnv('DB_NAME', 'weather_digest');
 
 const baseName = (process.env.DB_NAME ?? 'weather_digest').trim().replace(/_test(?:_\d+)?$/, '');

@@ -1,13 +1,13 @@
 import { Op, literal, type Order, type Transaction, type WhereOptions } from 'sequelize';
 import { ConflictError } from '../../errors/httpErrors.js';
 import { OPEN_REQUEST_STATUSES, REQUEST_SORT_FIELDS } from '../../types/request.js';
+import type { RequestSparePartLine } from '../../types/sparePart.js';
 import type {
   AssignedTechnician,
   AssigneeInput,
   MaintenanceRequest,
   RequestListQuery,
   RequestListResult,
-  RequestPriority,
   RequestSortField,
   RequestStatus,
   StatusHistoryEntry,
@@ -15,12 +15,17 @@ import type {
 import { MaintenanceRequest as MaintenanceRequestModel } from '../../db/models/maintenanceRequest.js';
 import { RequestAssignee } from '../../db/models/requestAssignee.js';
 import { RequestStatusHistory } from '../../db/models/requestStatusHistory.js';
+import { SparePart } from '../../db/models/sparePart.js';
 import { Technician } from '../../db/models/technician.js';
 import { ensureDb, isUuid } from './db.js';
-import { resolvePageWindow, resolveSortField, resolveSortOrder } from './listQuery.js';
+import {
+  containsPattern,
+  resolvePageWindow,
+  resolveSortField,
+  resolveSortOrder,
+} from './listQuery.js';
 
 const API_AUTHOR = 'api';
-const HISTORY_TRIGGER = 'request_status_history_forbid_mutation';
 const DEFAULT_SORT: RequestSortField = 'createdAt';
 
 const REQUEST_ATTRIBUTES = [
@@ -313,16 +318,17 @@ export async function remove(id: string): Promise<boolean> {
       return false;
     }
 
-    await deleteRequestGraph([id], transaction);
+    await existing.destroy({ transaction });
     return true;
   });
 }
 
 /**
- * Удаляет закрытые заявки оборудования вместе с историей и назначениями.
+ * Прячет закрытые заявки оборудования (`deleted_at`).
+ * История статусов и назначения остаются: журнал только дополняется.
  * Открытые заявки оставляют прежний ответ 409.
  */
-export async function deleteAllForEquipment(
+export async function hideRequestsForEquipment(
   equipmentId: string,
   transaction: Transaction,
 ): Promise<void> {
@@ -338,15 +344,10 @@ export async function deleteAllForEquipment(
     throw new ConflictError('Equipment has open maintenance requests');
   }
 
-  const rows = await MaintenanceRequestModel.findAll({
-    attributes: ['id'],
+  await MaintenanceRequestModel.destroy({
     where: { equipmentId },
     transaction,
   });
-  await deleteRequestGraph(
-    rows.map((row) => row.id),
-    transaction,
-  );
 }
 
 function requestDetailQuery() {
@@ -358,38 +359,53 @@ function requestDetailQuery() {
         attributes: [...TECHNICIAN_ATTRIBUTES],
         through: { attributes: ['role', 'hours'] },
       },
+      {
+        model: SparePart,
+        attributes: ['id', 'name', 'sku'],
+        through: { attributes: ['quantity'] },
+      },
     ],
     order: [[{ model: Technician, as: 'Technicians' }, 'fullName', 'ASC']] as Order,
   };
 }
 
 function requestWhere(query: RequestListQuery): WhereOptions {
-  const where: {
-    status?: RequestStatus;
-    priority?: RequestPriority;
-    equipmentId?: string;
-    createdAt?: Record<symbol, Date>;
-  } = {};
+  const filters: WhereOptions[] = [];
 
   if (query.status !== undefined) {
-    where.status = query.status;
+    filters.push({ status: query.status });
   }
 
   if (query.priority !== undefined) {
-    where.priority = query.priority;
+    filters.push({ priority: query.priority });
   }
 
   if (query.equipmentId !== undefined) {
-    where.equipmentId = query.equipmentId;
+    filters.push({ equipmentId: query.equipmentId });
   }
 
   const created = timeRange(query.createdFrom, query.createdTo);
 
   if (created !== undefined) {
-    where.createdAt = created;
+    filters.push({ createdAt: created });
   }
 
-  return where;
+  if (query.q !== undefined) {
+    const pattern = containsPattern(query.q);
+    filters.push({
+      [Op.or]: [{ title: { [Op.iLike]: pattern } }, { description: { [Op.iLike]: pattern } }],
+    });
+  }
+
+  if (filters.length === 0) {
+    return {};
+  }
+
+  if (filters.length === 1) {
+    return filters[0] ?? {};
+  }
+
+  return { [Op.and]: filters };
 }
 
 function timeRange(
@@ -437,6 +453,7 @@ function toRequest(row: MaintenanceRequestModel, withAssignees: boolean): Mainte
     request.assignedTechnicians = (row.Technicians ?? []).map((technician) =>
       toAssignedTechnician(technician),
     );
+    request.spareParts = (row.SpareParts ?? []).map((part) => toSparePartLine(part));
   }
 
   return request;
@@ -455,6 +472,30 @@ function toAssignedTechnician(technician: Technician): AssignedTechnician {
   };
 }
 
+function toSparePartLine(part: SparePart): RequestSparePartLine {
+  const source = part as SparePart & { RequestSparePart?: { quantity?: unknown } };
+  const quantity = source.RequestSparePart?.quantity;
+
+  return {
+    id: part.id,
+    name: part.name,
+    sku: part.sku,
+    quantity: formatQuantity(quantity),
+  };
+}
+
+function formatQuantity(value: unknown): string {
+  if (typeof value === 'string' && value.length > 0) {
+    return value;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toFixed(2);
+  }
+
+  return '0.00';
+}
+
 function readAssignment(technician: Technician): { role: 'lead' | 'member'; hours: string } {
   const source = technician as Technician & {
     RequestAssignee?: { role?: unknown; hours?: unknown };
@@ -471,41 +512,6 @@ function readAssignment(technician: Technician): { role: 'lead' | 'member'; hour
   }
 
   return { role, hours: '0.00' };
-}
-
-async function deleteRequestGraph(ids: readonly string[], transaction: Transaction): Promise<void> {
-  if (ids.length === 0) {
-    return;
-  }
-
-  const sequelize = ensureDb();
-  await setHistoryTrigger(false, transaction);
-
-  try {
-    await sequelize.query('DELETE FROM request_status_history WHERE request_id IN (:ids)', {
-      replacements: { ids: [...ids] },
-      transaction,
-    });
-  } finally {
-    await setHistoryTrigger(true, transaction);
-  }
-
-  await RequestAssignee.destroy({
-    where: { requestId: [...ids] },
-    transaction,
-  });
-  await MaintenanceRequestModel.destroy({
-    where: { id: [...ids] },
-    transaction,
-  });
-}
-
-async function setHistoryTrigger(enabled: boolean, transaction: Transaction): Promise<void> {
-  const action = enabled ? 'ENABLE' : 'DISABLE';
-  await ensureDb().query(
-    `ALTER TABLE request_status_history ${action} TRIGGER ${HISTORY_TRIGGER}`,
-    { transaction },
-  );
 }
 
 function toIso(value: Date | string): string {

@@ -75,15 +75,7 @@ export const replaceAssigneesBodySchema = z
   .refine((value) => value.assignees.filter((item) => item.role === 'lead').length === 1, {
     error: 'В бригаде должен быть ровно один специалист с ролью lead',
     path: ['assignees'],
-  })
-  .refine(
-    (value) =>
-      new Set(value.assignees.map((item) => item.technicianId)).size === value.assignees.length,
-    {
-      error: 'Один специалист не может быть назначен дважды',
-      path: ['assignees'],
-    },
-  );
+  });
 
 export const requestIdParamsSchema = idParamsSchema;
 
@@ -98,6 +90,7 @@ export const requestListQuerySchema = z.object({
   equipmentId: z.string().trim().min(1).optional(),
   createdFrom: isoDateSchema.optional(),
   createdTo: isoDateSchema.optional(),
+  q: z.string().trim().min(1).max(100).optional(),
   sortBy: z.enum(REQUEST_SORT_FIELDS, { error: 'Недопустимое значение' }).optional(),
   order: sortOrderQuerySchema,
   page: pageQuerySchema,

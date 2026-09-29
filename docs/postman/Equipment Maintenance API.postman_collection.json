@@ -43,13 +43,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "health"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
             }
           },
           "response": []
@@ -130,13 +125,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"]
             }
           },
           "response": []
@@ -176,13 +166,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment?page=1&limit=10",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"],
               "query": [
                 {
                   "key": "page",
@@ -226,14 +211,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}"]
             }
           },
           "response": []
@@ -282,14 +261,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}"]
             }
           },
           "response": []
@@ -328,15 +301,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}/weather",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}",
-                "weather"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}", "weather"]
             }
           },
           "response": []
@@ -370,15 +336,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}/requests?page=1&limit=10",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}",
-                "requests"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}", "requests"],
               "query": [
                 {
                   "key": "page",
@@ -454,13 +413,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             }
           },
           "response": []
@@ -494,13 +448,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/requests?page=1&limit=10",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"],
               "query": [
                 {
                   "key": "page",
@@ -543,14 +492,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}"]
             }
           },
           "response": []
@@ -595,14 +538,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}"]
             }
           },
           "response": []
@@ -661,15 +598,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/assignees",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}",
-                "assignees"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "assignees"]
             },
             "description": "Назначение бригады на основную заявку до Status - In Progress. Без специалистов этот переход отвечает 409. Сам запрос смены статуса не менялся."
           },
@@ -715,15 +645,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "status"]
             }
           },
           "response": []
@@ -768,15 +691,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "status"]
             }
           },
           "response": []
@@ -841,15 +757,10 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             },
-            "description": "Отдельная заявка для сценариев бригады, чтобы не переписывать основную заявку Кейса 2."
+            "description": "Отдельная заявка для сценариев бригады, чтобы не переписывать основную заявку."
           },
           "response": []
         },
@@ -907,15 +818,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{assigneeProbeRequestId}}/assignees",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{assigneeProbeRequestId}}",
-                "assignees"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{assigneeProbeRequestId}}", "assignees"]
             }
           },
           "response": []
@@ -971,15 +875,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{assigneeProbeRequestId}}/assignees",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{assigneeProbeRequestId}}",
-                "assignees"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{assigneeProbeRequestId}}", "assignees"]
             }
           },
           "response": []
@@ -992,8 +889,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status code is 422\", () => {",
-                  "    pm.response.to.have.status(422);",
+                  "pm.test(\"Status code is 409\", () => {",
+                  "    pm.response.to.have.status(409);",
                   "});",
                   "",
                   "pm.test(\"Content-Type is JSON\", () => {",
@@ -1004,14 +901,9 @@
                   "    const body = pm.response.json();",
                   "",
                   "    pm.expect(body).to.have.property(\"error\");",
-                  "    pm.expect(body.error.code).to.eql(\"VALIDATION_ERROR\");",
+                  "    pm.expect(body.error.code).to.eql(\"CONFLICT\");",
                   "    pm.expect(body.error).to.have.property(\"message\");",
                   "    pm.expect(body.error).to.have.property(\"requestId\");",
-                  "});",
-                  "",
-                  "pm.test(\"Duplicate technician is rejected before write\", () => {",
-                  "    const body = pm.response.json();",
-                  "    pm.expect(body.error.details).to.be.an(\"array\").that.is.not.empty;",
                   "});"
                 ]
               }
@@ -1040,17 +932,10 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{assigneeProbeRequestId}}/assignees",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{assigneeProbeRequestId}}",
-                "assignees"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{assigneeProbeRequestId}}", "assignees"]
             },
-            "description": "Повтор technicianId в одном теле — 422. Гонка unique (request_id, technician_id) тоже переводится в 422, поэтому отдельный 409 для дубля не применяется."
+            "description": "Повтор technicianId в одном теле — 409. Гонка unique (request_id, technician_id) тоже переводится в 409, транзакция откатывается."
           },
           "response": []
         },
@@ -1105,15 +990,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{assigneeProbeRequestId}}/assignees",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{assigneeProbeRequestId}}",
-                "assignees"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{assigneeProbeRequestId}}", "assignees"]
             }
           },
           "response": []
@@ -1169,15 +1047,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{assigneeProbeRequestId}}/assignees",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{assigneeProbeRequestId}}",
-                "assignees"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{assigneeProbeRequestId}}", "assignees"]
             }
           },
           "response": []
@@ -1233,15 +1104,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/00000000-0000-4000-8000-000000000099/assignees",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "00000000-0000-4000-8000-000000000099",
-                "assignees"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "00000000-0000-4000-8000-000000000099", "assignees"]
             }
           },
           "response": []
@@ -1292,15 +1156,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/history",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}",
-                "history"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "history"]
             },
             "description": "Читается после Status - In Progress и Status - Done основной заявки. Создание заявки само историю не пишет."
           },
@@ -1341,16 +1198,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/assignees/{{memberTechnicianId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}",
-                "assignees",
-                "{{memberTechnicianId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "assignees", "{{memberTechnicianId}}"]
             }
           },
           "response": []
@@ -1393,16 +1242,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/assignees/{{memberTechnicianId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}",
-                "assignees",
-                "{{memberTechnicianId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "assignees", "{{memberTechnicianId}}"]
             },
             "description": "Повторное снятие того же специалиста: техника есть, назначения уже нет."
           },
@@ -1446,9 +1287,7 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/00000000-0000-4000-8000-000000000099/assignees/{{leadTechnicianId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
+              "host": ["{{baseUrl}}"],
               "path": [
                 "api",
                 "requests",
@@ -1498,9 +1337,7 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/assignees/00000000-0000-4000-8000-000000000099",
-              "host": [
-                "{{baseUrl}}"
-              ],
+              "host": ["{{baseUrl}}"],
               "path": [
                 "api",
                 "requests",
@@ -1572,13 +1409,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             }
           },
           "response": []
@@ -1634,15 +1466,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{statusProbeRequestId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{statusProbeRequestId}}",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{statusProbeRequestId}}", "status"]
             }
           },
           "response": []
@@ -1695,15 +1520,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{statusProbeRequestId}}/assignees",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{statusProbeRequestId}}",
-                "assignees"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{statusProbeRequestId}}", "assignees"]
             }
           },
           "response": []
@@ -1756,15 +1574,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{statusProbeRequestId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{statusProbeRequestId}}",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{statusProbeRequestId}}", "status"]
             }
           },
           "response": []
@@ -1801,9 +1612,7 @@
               "listen": "prerequest",
               "script": {
                 "type": "text/javascript",
-                "exec": [
-                  ""
-                ]
+                "exec": [""]
               }
             }
           ],
@@ -1830,13 +1639,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"],
               "query": [
                 {
                   "key": "",
@@ -1882,14 +1686,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/00000000-0000-4000-8000-000000000000",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "00000000-0000-4000-8000-000000000000"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "00000000-0000-4000-8000-000000000000"]
             }
           },
           "response": []
@@ -1940,13 +1738,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"]
             }
           },
           "response": []
@@ -1997,13 +1790,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             }
           },
           "response": []
@@ -2037,14 +1825,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/requests/00000000-0000-4000-8000-000000000000",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "00000000-0000-4000-8000-000000000000"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "00000000-0000-4000-8000-000000000000"]
             }
           },
           "response": []
@@ -2092,13 +1874,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             }
           },
           "response": []
@@ -2143,13 +1920,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests"]
             }
           },
           "response": []
@@ -2197,15 +1969,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{invalidStatusRequestId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{invalidStatusRequestId}}",
-                "status"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{invalidStatusRequestId}}", "status"]
             }
           },
           "response": []
@@ -2250,13 +2015,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"]
             },
             "body": {
               "mode": "raw",
@@ -2305,14 +2065,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}"]
             }
           },
           "response": []
@@ -2350,13 +2104,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment?limit=-1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"],
               "query": [
                 {
                   "key": "limit",
@@ -2400,13 +2149,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment?limit=101",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"],
               "query": [
                 {
                   "key": "limit",
@@ -2457,13 +2201,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment?sortBy=name;DROP TABLE equipment",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"],
               "query": [
                 {
                   "key": "sortBy",
@@ -2523,15 +2262,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/sites/{{siteId}}/summary",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "sites",
-                "{{siteId}}",
-                "summary"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sites", "{{siteId}}", "summary"]
             },
             "description": "siteId — площадка «Северная ВЭС» из сидера. Счётчики стабильны, пока коллекция не создаёт заявки на этом site."
           },
@@ -2570,15 +2302,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/sites/00000000-0000-4000-8000-000000000099/summary",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "sites",
-                "00000000-0000-4000-8000-000000000099",
-                "summary"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sites", "00000000-0000-4000-8000-000000000099", "summary"]
             }
           },
           "response": []
@@ -2622,14 +2347,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/reports/equipment-load",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "reports",
-                "equipment-load"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "equipment-load"]
             },
             "description": "Четыре заявки созданного оборудования: основная done, probe бригады new, probe статуса in_progress, заявка недопустимого перехода new. К этому моменту member основной заявки уже снят, поэтому часы 1.50+1.50+2.00+4.00 = 9.00."
           },
@@ -2672,14 +2391,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/reports/equipment-load?createdFrom=2020-01-01&createdTo=2035-12-31",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "reports",
-                "equipment-load"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "equipment-load"],
               "query": [
                 {
                   "key": "createdFrom",
@@ -2725,14 +2438,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/reports/equipment-load?minRequests=5",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "reports",
-                "equipment-load"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "equipment-load"],
               "query": [
                 {
                   "key": "minRequests",
@@ -2777,14 +2484,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/reports/equipment-load?minRequests=-1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "reports",
-                "equipment-load"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "equipment-load"],
               "query": [
                 {
                   "key": "minRequests",
@@ -2828,14 +2529,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/reports/equipment-load?createdFrom=tomorrow",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "reports",
-                "equipment-load"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "equipment-load"],
               "query": [
                 {
                   "key": "createdFrom",
@@ -2876,14 +2571,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{statusProbeRequestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{statusProbeRequestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{statusProbeRequestId}}"]
             },
             "description": "Заявка остаётся in_progress, поэтому её нужно снять до удаления оборудования."
           },
@@ -2914,14 +2603,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{assigneeProbeRequestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{assigneeProbeRequestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{assigneeProbeRequestId}}"]
             }
           },
           "response": []
@@ -2955,14 +2638,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{requestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}"]
             }
           },
           "response": []
@@ -2979,14 +2656,8 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{invalidStatusRequestId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "requests",
-                "{{invalidStatusRequestId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{invalidStatusRequestId}}"]
             }
           },
           "response": []
@@ -3020,19 +2691,173 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "equipment",
-                "{{equipmentId}}"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment", "{{equipmentId}}"]
             }
           },
           "response": []
         }
       ]
+    },
+    {
+      "name": "Spare Parts",
+      "item": [
+        {
+          "name": "Create Spare Part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set(\"sparePartId\", body.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Подшипник\",\n  \"sku\": \"BRG-POSTMAN\",\n  \"stockQuantity\": 5\n}"
+            },
+            "url": "{{baseUrl}}/api/spare-parts"
+          }
+        },
+        {
+          "name": "Duplicate SKU",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Conflict code\", () => {",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"CONFLICT\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Подшипник повтор\",\n  \"sku\": \"BRG-POSTMAN\",\n  \"stockQuantity\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/spare-parts"
+          }
+        },
+        {
+          "name": "Issue Spare Part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Request lists the issued part\", () => {",
+                  "    const line = pm.response.json().data.spareParts[0];",
+                  "    pm.expect(line.quantity).to.eql(\"2.00\");",
+                  "    pm.expect(line.sku).to.eql(\"BRG-POSTMAN\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sparePartId\": \"{{sparePartId}}\",\n  \"quantity\": 2\n}"
+            },
+            "url": "{{baseUrl}}/api/requests/{{requestId}}/spare-parts"
+          }
+        },
+        {
+          "name": "Issue Unknown Spare Part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sparePartId\": \"00000000-0000-4000-8000-000000000099\",\n  \"quantity\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/requests/{{requestId}}/spare-parts"
+          }
+        },
+        {
+          "name": "Issue More Than Stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 409\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Conflict code\", () => {",
+                  "    pm.expect(pm.response.json().error.code).to.eql(\"CONFLICT\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sparePartId\": \"{{sparePartId}}\",\n  \"quantity\": 10\n}"
+            },
+            "url": "{{baseUrl}}/api/requests/{{requestId}}/spare-parts"
+          }
+        }
+      ],
+      "description": "Списание запчастей. Нужны requestId из папки Requests и ключ API."
     },
     {
       "name": "Security",
@@ -3091,13 +2916,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "health"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
             }
           },
           "response": []

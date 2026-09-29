@@ -21,7 +21,9 @@ npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
 npm run api
 ```
 
-`DB_HOST=localhost` в `.env.example` — это хост, с которого запускаются `npm run api` и `sequelize-cli`. В контейнере `api` хост переопределён на `postgres`. Пароль и `API_KEY` берутся из `.env`, в репозиторий их не кладут.
+`DB_HOST=localhost` в `.env.example` — это хост, с которого запускаются `npm run api` и `sequelize-cli`. В контейнере `api` хост переопределён на `postgres`. Пароли и `API_KEY` берутся из `.env`, в репозиторий их не кладут.
+
+API подключается как `DB_APP_USER`. Эта роль читает и меняет рабочие таблицы, в `request_status_history` может только вставлять строки. `UPDATE` и `DELETE` журнала ей не выданы, как и право создавать объекты в схеме. Миграции и сиды выполняет владелец `DB_USER`: `npm run db:migrate` сначала создаёт роль приложения (`scripts/ensure-app-role.cjs`), затем накатывает миграции и выдаёт права.
 
 `npm run db:seed` гоняет оба сида. Второй читает `./data/equipment.json` и `./data/requests.json`, а каталог `data/` в git не входит. На чистом клоне этих файлов нет, поэтому `db:seed` упадёт на импорте. Демо-сида хватает, чтобы открыть API и коллекцию Postman.
 
@@ -43,7 +45,7 @@ docker compose up -d --wait postgres
 npm run db:migrate
 ```
 
-Порядок: `sites`, `equipment`, `equipment_passports`, `technicians`, `maintenance_requests`, `request_status_history`, `request_assignees`.
+Порядок: `sites`, `equipment`, `equipment_passports`, `technicians`, `maintenance_requests`, `request_status_history`, `request_assignees`, затем `deleted_at` и частичный уникальный `serial_number`, права роли приложения, индексы поиска, `spare_parts` и `request_spare_parts`.
 
 ### Сиды
 
@@ -79,17 +81,21 @@ npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
 
 ## Схема базы
 
-| Таблица                  | Содержание                                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------------------------- |
-| `sites`                  | Площадка: `name`, уникальный `code`, `region`, `latitude`, `longitude`                            |
-| `equipment`              | Единица: `site_id`, `name`, тип и статус (enum), уникальный `serial_number`, `installation_date`  |
-| `equipment_passports`    | Паспорт: `manufacturer`, `model`, `nominal_power`, `last_verification_date`. Один на оборудование |
-| `technicians`            | Специалист: `full_name`, `specialization`, уникальный `employee_number`                           |
-| `maintenance_requests`   | Заявка: `equipment_id`, `title`, `description`, `priority`, `status`, `planned_at`, `author`      |
-| `request_status_history` | Смена статуса: `old_status`, `new_status`, `changed_by`, `comment`. Строки только добавляются     |
-| `request_assignees`      | Назначение: пара `(request_id, technician_id)`, `role` (`lead` \| `member`), `hours`              |
+| Таблица                  | Содержание                                                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `sites`                  | Площадка: `name`, уникальный `code`, `region`, `latitude`, `longitude`                                     |
+| `equipment`              | Единица: `site_id`, `name`, тип и статус (enum), `serial_number`, `installation_date`, `deleted_at`        |
+| `equipment_passports`    | Паспорт: `manufacturer`, `model`, `nominal_power`, `last_verification_date`. Один на оборудование          |
+| `technicians`            | Специалист: `full_name`, `specialization`, уникальный `employee_number`                                    |
+| `maintenance_requests`   | Заявка: `equipment_id`, `title`, `description`, `priority`, `status`, `planned_at`, `author`, `deleted_at` |
+| `request_status_history` | Смена статуса: `old_status`, `new_status`, `changed_by`, `comment`. Строки только добавляются              |
+| `request_assignees`      | Назначение: пара `(request_id, technician_id)`, `role` (`lead` \| `member`), `hours`                       |
+| `spare_parts`            | Запчасть: `name`, `sku` (уникален при `deleted_at IS NULL`), `stock_quantity`, `deleted_at`                |
+| `request_spare_parts`    | Расход: пара `(request_id, spare_part_id)`, `quantity`                                                     |
 
-У `request_status_history` триггер `request_status_history_forbid_mutation`: `UPDATE` и `DELETE` из SQL отклоняются. При удалении заявки сервис на время транзакции триггер выключает, стирает историю и включает обратно.
+У `request_status_history` триггер `request_status_history_forbid_mutation`: `UPDATE` и `DELETE` отклоняются. У роли приложения нет прав на эти команды. Скрытие заявки или оборудования ставит `deleted_at` и не трогает журнал.
+
+`serial_number` уникален среди строк с `deleted_at IS NULL` (частичный индекс `equipment_serial_number_active_idx`). После скрытия оборудования тот же серийный номер можно выдать снова.
 
 Связи:
 
@@ -97,7 +103,8 @@ npx sequelize-cli db:seed --seed 20260928230000-demo-maintenance.cjs
 - оборудование — паспорт, не больше одного (`equipment_passports.equipment_id` уникален, `ON DELETE CASCADE`); паспорта может не быть;
 - оборудование — заявки, 1:N (`ON DELETE RESTRICT`);
 - заявка — история статусов, 1:N (`ON DELETE RESTRICT`);
-- заявка — техники, N:M через `request_assignees`. У заявки не больше одного `lead`: частичный уникальный индекс `request_assignees_one_lead_per_request`.
+- заявка — техники, N:M через `request_assignees`. У заявки не больше одного `lead`: частичный уникальный индекс `request_assignees_one_lead_per_request`;
+- заявка — запчасти, N:M через `request_spare_parts` (`quantity`). Списание остатка и вставка строки идут в одной транзакции. `sku` уникален при `deleted_at IS NULL`.
 
 ```mermaid
 erDiagram
@@ -107,6 +114,8 @@ erDiagram
   maintenance_requests ||--o{ request_status_history : "request_id"
   maintenance_requests ||--o{ request_assignees : "request_id"
   technicians ||--o{ request_assignees : "technician_id"
+  maintenance_requests ||--o{ request_spare_parts : "request_id"
+  spare_parts ||--o{ request_spare_parts : "spare_part_id"
 ```
 
 Площадка не копируется в каждую строку `equipment`: там только `site_id`. Паспорт — отдельная таблица, а не те же поля внутри оборудования. Техник описан в `technicians` один раз, в заявке на него ссылается `request_assignees` (роль и часы). Смены статуса лежат в `request_status_history`, а не колонками на заявке. Повторяющихся групп нет — схема в 3NF.
@@ -115,28 +124,33 @@ erDiagram
 
 Список — `{ "data", "meta" }`, карточка — `{ "data" }`, удаление — пустое тело. В карточке оборудования добавилось `passport` (`null`, если паспорта нет). В карточке заявки — `assignedTechnicians` (у новой заявки `[]`). В списке заявок этого поля нет: JOIN с назначениями сломал бы `LIMIT`.
 
-| Метод    | Путь                                  | Auth | Код           | Описание                                                                                                                  |
-| -------- | ------------------------------------- | ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `GET`    | `/api/health`                         | нет  | `200`         | Проверка живости: `{ "status": "ok" }`                                                                                    |
-| `GET`    | `/api/equipment`                      | нет  | `200`         | Список оборудования. Query: `status`, `type`, `installedFrom`, `installedTo`, `sortBy`, `order`, `page`, `limit`          |
-| `POST`   | `/api/equipment`                      | да   | `201`         | Создать оборудование. Заголовок `Location: /api/equipment/:id`                                                            |
-| `GET`    | `/api/equipment/:id`                  | нет  | `200`         | Карточка оборудования                                                                                                     |
-| `PATCH`  | `/api/equipment/:id`                  | да   | `200`         | Частичное обновление                                                                                                      |
-| `DELETE` | `/api/equipment/:id`                  | да   | `204`         | Удалить, если нет открытых заявок (`new` / `in_progress`)                                                                 |
-| `GET`    | `/api/equipment/:id/requests`         | нет  | `200`         | Заявки по оборудованию. Query: `status`, `priority`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit`       |
-| `GET`    | `/api/equipment/:id/weather`          | нет  | `200`         | Прогноз Open-Meteo и флаг `outdoorWorkSuitable`                                                                           |
-| `GET`    | `/api/requests`                       | нет  | `200`         | Список заявок. Query: `status`, `priority`, `equipmentId`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit` |
-| `POST`   | `/api/requests`                       | да   | `201`         | Создать заявку (`status` всегда `new`). `Location: /api/requests/:id`                                                     |
-| `POST`   | `/api/requests/import`                | да   | `201` / `207` | Пакетная загрузка: ошибки по записям не откатывают успешные. До 100 элементов                                             |
-| `GET`    | `/api/requests/:id`                   | нет  | `200`         | Карточка заявки, включая `assignedTechnicians`                                                                            |
-| `POST`   | `/api/requests/:id/assignees`         | да   | `200`         | Заменить бригаду целиком. Ровно один `lead`                                                                               |
-| `DELETE` | `/api/requests/:id/assignees/:userId` | да   | `204`         | Снять одного техника. `:userId` — это `technicians.id`                                                                    |
-| `GET`    | `/api/requests/:id/history`           | нет  | `200`         | История смен статуса, по `createdAt`                                                                                      |
-| `GET`    | `/api/sites/:id/summary`              | нет  | `200`         | Сводка заявок площадки: счётчики по статусу и приоритету, среднее время закрытия                                          |
-| `GET`    | `/api/reports/equipment-load`         | нет  | `200`         | Нагрузка оборудования. Query: `createdFrom`, `createdTo`, `minRequests`                                                   |
-| `PATCH`  | `/api/requests/:id`                   | да   | `200`         | Поля заявки без смены статуса                                                                                             |
-| `PATCH`  | `/api/requests/:id/status`            | да   | `200`         | Смена статуса по графу переходов                                                                                          |
-| `DELETE` | `/api/requests/:id`                   | да   | `204`         | Удалить заявку                                                                                                            |
+| Метод    | Путь                                  | Auth | Код           | Описание                                                                                                                       |
+| -------- | ------------------------------------- | ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `GET`    | `/api/health`                         | нет  | `200`         | Проверка живости: `{ "status": "ok" }`                                                                                         |
+| `GET`    | `/api/equipment`                      | нет  | `200`         | Список оборудования. Query: `status`, `type`, `installedFrom`, `installedTo`, `q`, `sortBy`, `order`, `page`, `limit`          |
+| `POST`   | `/api/equipment`                      | да   | `201`         | Создать оборудование. Заголовок `Location: /api/equipment/:id`                                                                 |
+| `GET`    | `/api/equipment/:id`                  | нет  | `200`         | Карточка оборудования                                                                                                          |
+| `PATCH`  | `/api/equipment/:id`                  | да   | `200`         | Частичное обновление                                                                                                           |
+| `DELETE` | `/api/equipment/:id`                  | да   | `204`         | Удалить, если нет открытых заявок (`new` / `in_progress`)                                                                      |
+| `GET`    | `/api/equipment/:id/requests`         | нет  | `200`         | Заявки по оборудованию. Query: `status`, `priority`, `createdFrom`, `createdTo`, `sortBy`, `order`, `page`, `limit`            |
+| `GET`    | `/api/equipment/:id/weather`          | нет  | `200`         | Прогноз Open-Meteo и флаг `outdoorWorkSuitable`                                                                                |
+| `GET`    | `/api/requests`                       | нет  | `200`         | Список заявок. Query: `status`, `priority`, `equipmentId`, `createdFrom`, `createdTo`, `q`, `sortBy`, `order`, `page`, `limit` |
+| `POST`   | `/api/requests`                       | да   | `201`         | Создать заявку (`status` всегда `new`). `Location: /api/requests/:id`                                                          |
+| `POST`   | `/api/requests/import`                | да   | `201` / `207` | Пакетная загрузка: ошибки по записям не откатывают успешные. До 100 элементов                                                  |
+| `GET`    | `/api/requests/:id`                   | нет  | `200`         | Карточка заявки, включая `assignedTechnicians` и `spareParts`                                                                  |
+| `POST`   | `/api/requests/:id/assignees`         | да   | `200`         | Заменить бригаду целиком. Ровно один `lead`                                                                                    |
+| `DELETE` | `/api/requests/:id/assignees/:userId` | да   | `204`         | Снять одного техника. `:userId` — это `technicians.id`                                                                         |
+| `GET`    | `/api/requests/:id/history`           | нет  | `200`         | История смен статуса, по `createdAt`                                                                                           |
+| `GET`    | `/api/sites/:id/summary`              | нет  | `200`         | Сводка заявок площадки: счётчики по статусу и приоритету, среднее время закрытия                                               |
+| `GET`    | `/api/reports/equipment-load`         | нет  | `200`         | Нагрузка оборудования. Query: `createdFrom`, `createdTo`, `minRequests`                                                        |
+| `GET`    | `/api/spare-parts`                    | нет  | `200`         | Список запчастей. Query: `q`, `sortBy`, `order`, `page`, `limit`                                                               |
+| `POST`   | `/api/spare-parts`                    | да   | `201`         | Создать запчасть. `sku` уникален среди нескрытых                                                                               |
+| `GET`    | `/api/spare-parts/:id`                | нет  | `200`         | Карточка запчасти                                                                                                              |
+| `DELETE` | `/api/spare-parts/:id`                | да   | `204`         | Скрыть запчасть. Тот же `sku` можно создать снова                                                                              |
+| `POST`   | `/api/requests/:id/spare-parts`       | да   | `200`         | Списать запчасть на заявку. Нехватка остатка или повтор пары — `409`                                                           |
+| `PATCH`  | `/api/requests/:id`                   | да   | `200`         | Поля заявки без смены статуса                                                                                                  |
+| `PATCH`  | `/api/requests/:id/status`            | да   | `200`         | Смена статуса по графу переходов                                                                                               |
+| `DELETE` | `/api/requests/:id`                   | да   | `204`         | Удалить заявку                                                                                                                 |
 
 Списки отвечают `{ "data": [...], "meta": { "total", "page", "limit" } }`. По умолчанию `page=1`, `limit=10`, максимум `limit=100`. Карточка — `{ "data": { ... } }`. Удаление — пустое тело.
 
@@ -188,7 +202,7 @@ curl -s http://localhost:3000/api/requests/e0000000-0000-4000-8000-000000000001/
 }
 ```
 
-Нет заявки или техника — `404`. Ноль или два `lead`, пустой список, повтор специалиста — `422`. Конфликт уникальности пары `(request_id, technician_id)` тоже `422`, транзакция откатывается.
+Нет заявки или техника — `404`. Ноль или два `lead`, пустой список — `422`. Повтор специалиста и конфликт уникальности пары `(request_id, technician_id)` — `409`, транзакция откатывается.
 
 ### `DELETE /api/requests/:id/assignees/:userId`
 
@@ -237,7 +251,7 @@ curl -s http://localhost:3000/api/requests/e0000000-0000-4000-8000-000000000001/
 | `id`           | string         | UUID, выдаёт сервер                                                                                         |
 | `name`         | string         | 3–100 символов                                                                                              |
 | `type`         | enum           | `turbine` \| `inverter` \| `sensor` \| `substation`                                                         |
-| `serialNumber` | string         | не пустой, уникальный                                                                                       |
+| `serialNumber` | string         | не пустой, уникален среди нескрытого оборудования                                                           |
 | `location.lat` | number         | −90…90                                                                                                      |
 | `location.lon` | number         | −180…180                                                                                                    |
 | `status`       | enum           | `operational` \| `maintenance` \| `fault` \| `decommissioned`                                               |
@@ -291,15 +305,17 @@ stateDiagram-v2
 
 Переход в `in_progress` при пустой бригаде — `409`, `Cannot set status to in_progress without assigned technicians`. Заявка остаётся в прежнем статусе.
 
-Замена бригады тоже под блокировкой строки заявки: старые назначения удаляются, новые вставляются. Если в теле не ровно один `lead`, ответ `422` (`В бригаде должен быть ровно один специалист с ролью lead`) и в базу ничего не пишется. То же при повторе техника и при нарушении уникального индекса.
+Замена бригады тоже под блокировкой строки заявки: старые назначения удаляются, новые вставляются. Если в теле не ровно один `lead`, ответ `422` (`В бригаде должен быть ровно один специалист с ролью lead`) и в базу ничего не пишется. Повтор техника и нарушение уникального индекса — `409`, изменения откатываются.
 
 Снятие одного назначения — отдельная короткая транзакция. Оно не проверяет, остался ли `lead`.
+
+`POST /api/requests/:id/spare-parts` блокирует заявку и строку запчасти, уменьшает `stock_quantity` и вставляет `request_spare_parts`. Если остатка меньше `quantity` или пара уже есть, ответ `409` и остаток не меняется. Проверка `stock_quantity >= 0` стоит и в схеме.
 
 ## Удаление оборудования
 
 `DELETE /api/equipment/:id` при заявках `new` или `in_progress` возвращает `409` (`Equipment has open maintenance requests`). Внешний ключ `maintenance_requests.equipment_id` сам по себе `ON DELETE RESTRICT`, поэтому открытую заявку база тоже не даст обойти.
 
-Закрытые заявки (`done`, `rejected`) удалению не мешают: в той же транзакции сервис снимает их историю (триггер на это время выключен), назначения и сами заявки, затем строку оборудования. Паспорт уходит каскадом. Площадка остаётся.
+Закрытые заявки (`done`, `rejected`) удалению не мешают: в той же транзакции им и оборудованию проставляется `deleted_at`. Строки истории и назначений остаются. Паспорт и площадка остаются. Списки и отчёты такие строки не показывают. `GET` по прежнему id отвечает `404`.
 
 ## Отчёты
 
@@ -357,11 +373,15 @@ curl -s "http://localhost:3000/api/reports/equipment-load?createdFrom=2026-01-01
 
 ## Запросы к PostgreSQL
 
-Значения в сыром SQL передаются через `bind` (отчёты) или `replacements` (удаление истории по списку id). В строку запроса они не склеиваются.
+Значения в сыром SQL передаются через `bind` (отчёты) или `replacements` (сиды). В строку запроса они не склеиваются.
 
 `sortBy` принимается только из белого списка и мапится на заранее записанное выражение. Для оборудования: `name`, `type`, `status`, `serialNumber`, `installedAt`. Для заявок: `title`, `priority`, `status`, `createdAt`, `plannedAt`, `equipmentId`. `order` — `asc` или `desc`. Чужое поле — `422`.
 
+`q` ищет подстроку без учёта регистра: у оборудования по `name` и `serialNumber`, у заявок по `title` и `description`. Символы `%`, `_` и `\` в тексте запроса остаются обычными символами. Запрос — `ILIKE` с привязкой параметра, индекс `GIN` с `pg_trgm`.
+
 `page` и `limit` проверяются до запроса. `limit` — целое от 1 до 100, `page` — целое от 1, смещение не больше 100000. Иначе `400`.
+
+Индексы под списки и поиск: `equipment_status_type_active_idx`, `equipment_name_trgm_idx`, `maintenance_requests_status_created_at_idx`, `maintenance_requests_title_trgm_idx`. Сравнение плана до и после — в `docs/explain-indexes.md`.
 
 ## Формат ошибки
 
@@ -678,8 +698,10 @@ docker compose up --build api
 | `DB_HOST`              | хост PostgreSQL. Для процесса на хосте — `localhost`; compose для контейнера `api` подставляет `postgres` | —                                             |
 | `DB_PORT`              | порт PostgreSQL                                                                                           | `5432` у compose, если переменная не задана   |
 | `DB_NAME`              | имя базы, обязательно                                                                                     | —                                             |
-| `DB_USER`              | пользователь, обязательно                                                                                 | —                                             |
-| `DB_PASSWORD`          | пароль, обязательно                                                                                       | —                                             |
+| `DB_USER`              | владелец схемы для миграций и сидов, обязательно                                                          | —                                             |
+| `DB_PASSWORD`          | пароль владельца, обязательно                                                                             | —                                             |
+| `DB_APP_USER`          | роль API: DML по рабочим таблицам, по журналу статусов только `SELECT` и `INSERT`                         | —                                             |
+| `DB_APP_PASSWORD`      | пароль роли API, обязательно                                                                              | —                                             |
 | `DB_POOL_MAX`          | максимум соединений Sequelize                                                                             | `5`                                           |
 | `DB_POOL_MIN`          | минимум, не больше `DB_POOL_MAX`                                                                          | `0`                                           |
 | `DB_POOL_ACQUIRE_MS`   | ожидание соединения из пула, мс                                                                           | `30000`                                       |

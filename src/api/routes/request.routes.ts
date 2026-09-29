@@ -4,6 +4,7 @@ import {
   deleteRequest,
   getRequestById,
   importRequests,
+  issueSparePart,
   listRequestHistory,
   listRequests,
   removeAssignee,
@@ -13,6 +14,7 @@ import {
 } from '../controllers/request.controller.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { validate } from '../middlewares/validate.js';
+import { issueSparePartBodySchema } from '../validators/sparePart.js';
 import {
   createRequestBodySchema,
   importRequestsBodySchema,
@@ -42,6 +44,11 @@ requestRouter.get(
   '/:id/history',
   validate({ params: requestIdParamsSchema }),
   asyncHandler(listRequestHistory),
+);
+requestRouter.post(
+  '/:id/spare-parts',
+  validate({ params: requestIdParamsSchema, body: issueSparePartBodySchema }),
+  asyncHandler(issueSparePart),
 );
 requestRouter.post(
   '/:id/assignees',

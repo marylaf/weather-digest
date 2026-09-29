@@ -3,28 +3,37 @@ import { createRequire } from 'node:module';
 import { Client } from 'pg';
 
 const require = createRequire(import.meta.url);
-import { getSequelize } from '../../src/db/database.js';
 
 let ready: Promise<void> | undefined;
 
 export async function resetStore(): Promise<void> {
   ready ??= prepareDatabase();
   await ready;
-  await getSequelize().query(`
-    TRUNCATE TABLE
-      request_assignees,
-      request_status_history,
-      maintenance_requests,
-      equipment_passports,
-      equipment,
-      technicians,
-      sites
-    RESTART IDENTITY CASCADE
-  `);
+  const client = adminClient(databaseName());
+
+  try {
+    await client.connect();
+    await client.query(`
+      TRUNCATE TABLE
+        request_spare_parts,
+        request_assignees,
+        request_status_history,
+        maintenance_requests,
+        spare_parts,
+        equipment_passports,
+        equipment,
+        technicians,
+        sites
+      RESTART IDENTITY CASCADE
+    `);
+  } finally {
+    await client.end();
+  }
 }
 
 async function prepareDatabase(): Promise<void> {
   await ensureDatabase();
+  await runNode('scripts/ensure-app-role.cjs');
   await runMigrations();
 }
 
@@ -51,6 +60,27 @@ async function ensureDatabase(): Promise<void> {
   }
 }
 
+function adminClient(database: string): Client {
+  return new Client({
+    host: requiredEnv('DB_HOST'),
+    port: Number(requiredEnv('DB_PORT')),
+    user: requiredEnv('DB_USER'),
+    password: process.env.DB_PASSWORD ?? '',
+    database,
+  });
+}
+
+function runNode(script: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [script], {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    collect(child, resolve, reject, script);
+  });
+}
+
 function runMigrations(): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(
@@ -62,23 +92,32 @@ function runMigrations(): Promise<void> {
         stdio: ['ignore', 'pipe', 'pipe'],
       },
     );
-    let output = '';
+    collect(child, resolve, reject, 'db:migrate');
+  });
+}
 
-    child.stdout.on('data', (chunk: Buffer) => {
-      output += chunk.toString();
-    });
-    child.stderr.on('data', (chunk: Buffer) => {
-      output += chunk.toString();
-    });
-    child.on('error', reject);
-    child.on('exit', (code) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
+function collect(
+  child: ReturnType<typeof spawn>,
+  resolve: () => void,
+  reject: (error: Error) => void,
+  label: string,
+): void {
+  let output = '';
 
-      reject(new Error(`db:migrate exited with ${code}\n${output}`));
-    });
+  child.stdout?.on('data', (chunk: Buffer) => {
+    output += chunk.toString();
+  });
+  child.stderr?.on('data', (chunk: Buffer) => {
+    output += chunk.toString();
+  });
+  child.on('error', reject);
+  child.on('exit', (code) => {
+    if (code === 0) {
+      resolve();
+      return;
+    }
+
+    reject(new Error(`${label} exited with ${code}\n${output}`));
   });
 }
 

@@ -32,6 +32,7 @@ SELECT
 FROM equipment AS e
 LEFT JOIN maintenance_requests AS r
   ON r.equipment_id = e.id
+ AND r.deleted_at IS NULL
  AND ($1::timestamptz IS NULL OR r.created_at >= $1::timestamptz)
  AND ($2::timestamptz IS NULL OR r.created_at <= $2::timestamptz)
 LEFT JOIN (
@@ -49,6 +50,7 @@ LEFT JOIN (
   WHERE request_status_history.new_status::text = 'done'
   GROUP BY request_status_history.request_id
 ) AS done_events ON done_events.request_id = r.id
+WHERE e.deleted_at IS NULL
 GROUP BY e.id, e.name
 HAVING COUNT(DISTINCT r.id) >= $3::integer
 ORDER BY e.name ASC, e.id ASC
@@ -62,6 +64,7 @@ FROM maintenance_requests AS r
 INNER JOIN equipment AS e
   ON e.id = r.equipment_id
  AND e.site_id = $1
+ AND e.deleted_at IS NULL
 INNER JOIN (
   SELECT
     request_status_history.request_id,
@@ -71,6 +74,7 @@ INNER JOIN (
   GROUP BY request_status_history.request_id
 ) AS closed ON closed.request_id = r.id
 WHERE r.status::text IN ('done', 'rejected')
+  AND r.deleted_at IS NULL
 `;
 
 interface GroupCountRow {

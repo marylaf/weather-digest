@@ -46,6 +46,16 @@ describe('/api/requests', () => {
     await resetStore();
   });
 
+  it('ищет заявку по фрагменту заголовка', async () => {
+    const equipment = await createEquipment();
+    await createRequest(equipment.id, { title: 'Замена подшипника' });
+    await createRequest(equipment.id, { title: 'Осмотр площадки' });
+
+    const found = await api().get('/api/requests').query({ q: 'ПОДШИП' }).expect(200);
+    expect(found.body.data).toEqual([expect.objectContaining({ title: 'Замена подшипника' })]);
+    expect(found.body.meta.total).toBe(1);
+  });
+
   it('создаёт заявку для существующего оборудования', async () => {
     const equipment = await createEquipment();
     const payload = requestPayload(equipment.id);
@@ -274,7 +284,7 @@ describe('/api/requests', () => {
           { technicianId: lead.id, role: 'member' },
         ],
       });
-      expectApiError(duplicate, 422, 'VALIDATION_ERROR');
+      expectApiError(duplicate, 409, 'CONFLICT');
 
       const fetched = await api().get(`/api/requests/${requestItem.id}`).expect(200);
       expect(fetched.body.data.assignedTechnicians).toEqual([]);
@@ -323,6 +333,29 @@ describe('/api/requests', () => {
         api().delete(`/api/requests/${requestItem.id}/assignees/${lead.id}`),
       );
       expectApiError(missingAssignment, 404, 'NOT_FOUND');
+    });
+
+    it('оставляет журнал статусов после скрытия заявки', async () => {
+      const equipment = await createEquipment();
+      const requestItem = await createRequest(equipment.id);
+      await withApiKey(api().patch(`/api/requests/${requestItem.id}/status`))
+        .send({ status: 'rejected', comment: 'не выезжаем' })
+        .expect(200);
+      await withApiKey(api().delete(`/api/requests/${requestItem.id}`)).expect(204);
+
+      initModels(getSequelize());
+      const history = await RequestStatusHistory.findAll({
+        where: { requestId: requestItem.id },
+      });
+      expect(history).toEqual([
+        expect.objectContaining({
+          requestId: requestItem.id,
+          newStatus: 'rejected',
+        }),
+      ]);
+
+      const missing = await api().get(`/api/requests/${requestItem.id}`);
+      expectApiError(missing, 404, 'NOT_FOUND');
     });
 
     it('откатывает статус, если запись истории падает', async () => {

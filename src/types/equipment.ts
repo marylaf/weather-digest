@@ -68,6 +68,7 @@ export interface EquipmentListQuery {
   type?: EquipmentType;
   installedFrom?: string;
   installedTo?: string;
+  q?: string;
   sortBy?: EquipmentSortField;
   order?: SortOrder;
   page?: number;

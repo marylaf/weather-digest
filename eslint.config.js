@@ -35,13 +35,20 @@ export default defineConfig(
     },
   },
   {
-    files: ['src/db/**/*.cjs', '.sequelizerc'],
+    files: ['src/db/**/*.cjs', 'scripts/**/*.cjs', '.sequelizerc'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: globals.node,
     },
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: globals.node,
     },
   },
   eslintConfigPrettier,
