@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import type { Transaction } from 'sequelize';
+import { isUniqueConstraint } from '../../errors/databaseErrors.js';
 import {
   ConflictError,
   HttpAppError,
@@ -6,19 +8,25 @@ import {
   ValidationError,
 } from '../../errors/httpErrors.js';
 import type {
+  AssigneeInput,
   CreateRequestInput,
   ImportRequestError,
   ImportRequestItemResult,
   ImportRequestsResult,
   MaintenanceRequest,
+  ReplaceAssigneesInput,
   RequestListQuery,
   RequestListResult,
   RequestStatus,
+  StatusHistoryEntry,
   UpdateRequestInput,
 } from '../../types/request.js';
 import * as equipmentRepository from '../repositories/equipment.repository.js';
+import { ensureDb } from '../repositories/db.js';
 import * as requestRepository from '../repositories/request.repository.js';
 import { createRequestBodySchema } from '../validators/request.js';
+
+const STATUS_CHANGE_ACTOR = 'api';
 
 const STATUS_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
   new: ['in_progress', 'rejected'],
@@ -148,28 +156,138 @@ export async function updateRequest(
   return saved;
 }
 
+/**
+ * Меняет статус и пишет историю в одной транзакции.
+ * Строка заявки блокируется `SELECT ... FOR UPDATE`, затем проверяется переход
+ * и наличие бригады для `in_progress`. Ошибка на записи истории откатывает статус.
+ */
 export async function updateRequestStatus(
   id: string,
   status: RequestStatus,
+  comment?: string,
 ): Promise<MaintenanceRequest> {
-  const current = await getRequestById(id);
-  assertStatusTransition(current.status, status);
+  const sequelize = ensureDb();
 
-  const updated: MaintenanceRequest = {
-    ...current,
-    status,
-    id: current.id,
-    createdAt: current.createdAt,
-    updatedAt: new Date().toISOString(),
-  };
+  return sequelize.transaction(async (transaction) => {
+    const current = await requestRepository.lockById(id, transaction);
 
-  const saved = await requestRepository.update(updated);
+    if (current === null) {
+      throw new NotFoundError('Maintenance request not found');
+    }
 
-  if (saved === null) {
-    throw new NotFoundError('Maintenance request not found');
-  }
+    assertStatusTransition(current.status, status);
 
-  return saved;
+    if (status === 'in_progress') {
+      const assigneeCount = await requestRepository.countAssignees(id, transaction);
+
+      if (assigneeCount === 0) {
+        throw new ConflictError('Cannot set status to in_progress without assigned technicians');
+      }
+    }
+
+    await requestRepository.updateStatus(id, status, transaction);
+    await requestRepository.appendStatusHistory(
+      {
+        requestId: id,
+        oldStatus: current.status,
+        newStatus: status,
+        changedBy: STATUS_CHANGE_ACTOR,
+        comment: normalizeComment(comment),
+      },
+      transaction,
+    );
+
+    const saved = await requestRepository.findById(id, transaction);
+
+    if (saved === null) {
+      throw new NotFoundError('Maintenance request not found');
+    }
+
+    return saved;
+  });
+}
+
+/**
+ * Заменяет бригаду целиком. В новой бригаде ровно один `lead`.
+ * Повтор technicianId в теле — 422 до записи, unique `(request_id, technician_id)`
+ * страхует гонку: исключение переводится в 422, транзакция откатывается.
+ */
+export async function replaceRequestAssignees(
+  id: string,
+  payload: ReplaceAssigneesInput,
+): Promise<MaintenanceRequest> {
+  const sequelize = ensureDb();
+
+  return sequelize.transaction(async (transaction) => {
+    const current = await requestRepository.lockById(id, transaction);
+
+    if (current === null) {
+      throw new NotFoundError('Maintenance request not found');
+    }
+
+    assertBrigade(payload.assignees);
+    await assertTechniciansExist(
+      payload.assignees.map((assignee) => assignee.technicianId),
+      transaction,
+    );
+
+    try {
+      await requestRepository.replaceAssignees(id, payload.assignees, transaction);
+    } catch (error) {
+      if (isUniqueConstraint(error)) {
+        throw new ValidationError([
+          {
+            field: 'assignees',
+            message: 'Состав бригады нарушает ограничение уникальности',
+          },
+        ]);
+      }
+
+      throw error;
+    }
+
+    const saved = await requestRepository.findById(id, transaction);
+
+    if (saved === null) {
+      throw new NotFoundError('Maintenance request not found');
+    }
+
+    return saved;
+  });
+}
+
+/**
+ * Снимает одно назначение.
+ * Правило «ровно один lead» относится к полной замене бригады, не к удалению строки.
+ * Снять lead можно: частичный unique index запрещает второго lead, но не требует,
+ * чтобы среди оставшихся member был lead. Пустая бригада после снятия последнего
+ * специалиста тоже допустима. Пока назначений нет, переход в `in_progress` вернёт 409.
+ */
+export async function removeRequestAssignee(
+  requestId: string,
+  technicianId: string,
+): Promise<void> {
+  const sequelize = ensureDb();
+
+  await sequelize.transaction(async (transaction) => {
+    const current = await requestRepository.lockById(requestId, transaction);
+
+    if (current === null) {
+      throw new NotFoundError('Maintenance request not found');
+    }
+
+    await assertTechniciansExist([technicianId], transaction);
+    const removed = await requestRepository.removeAssignee(requestId, technicianId, transaction);
+
+    if (!removed) {
+      throw new NotFoundError('Assignment not found');
+    }
+  });
+}
+
+export async function listRequestStatusHistory(id: string): Promise<StatusHistoryEntry[]> {
+  await getRequestById(id);
+  return requestRepository.listStatusHistory(id);
 }
 
 export async function deleteRequest(id: string): Promise<void> {
@@ -209,4 +327,54 @@ function assertStatusTransition(from: RequestStatus, to: RequestStatus): void {
   if (!STATUS_TRANSITIONS[from].includes(to)) {
     throw new ConflictError(`Cannot transition status from ${from} to ${to}`);
   }
+}
+
+function assertBrigade(assignees: readonly AssigneeInput[]): void {
+  const details: { field: string; message: string }[] = [];
+  const leadCount = assignees.filter((assignee) => assignee.role === 'lead').length;
+
+  if (assignees.length === 0) {
+    details.push({ field: 'assignees', message: 'Нужен хотя бы один специалист' });
+  }
+
+  if (leadCount !== 1) {
+    details.push({
+      field: 'assignees',
+      message: 'В бригаде должен быть ровно один специалист с ролью lead',
+    });
+  }
+
+  const technicianIds = assignees.map((assignee) => assignee.technicianId);
+
+  if (new Set(technicianIds).size !== technicianIds.length) {
+    details.push({
+      field: 'assignees',
+      message: 'Один специалист не может быть назначен дважды',
+    });
+  }
+
+  if (details.length > 0) {
+    throw new ValidationError(details);
+  }
+}
+
+async function assertTechniciansExist(
+  technicianIds: readonly string[],
+  transaction: Transaction,
+): Promise<void> {
+  const existing = await requestRepository.findExistingTechnicianIds(technicianIds, transaction);
+  const missing = technicianIds.some((technicianId) => !existing.has(technicianId));
+
+  if (missing) {
+    throw new NotFoundError('Technician not found');
+  }
+}
+
+function normalizeComment(comment: string | undefined): string | null {
+  if (comment === undefined) {
+    return null;
+  }
+
+  const trimmed = comment.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }

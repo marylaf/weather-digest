@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import type {
   CreateRequestInput,
+  ReplaceAssigneesInput,
   RequestListQuery,
   RequestStatus,
   UpdateRequestInput,
@@ -36,10 +37,30 @@ export async function updateRequest(req: Request, res: Response): Promise<void> 
 }
 
 export async function updateRequestStatus(req: Request, res: Response): Promise<void> {
+  const body = req.body as { status: RequestStatus; comment?: string };
   const data = await requestService.updateRequestStatus(
     req.params.id as string,
-    (req.body as { status: RequestStatus }).status,
+    body.status,
+    body.comment,
   );
+  res.status(200).json({ data });
+}
+
+export async function replaceAssignees(req: Request, res: Response): Promise<void> {
+  const data = await requestService.replaceRequestAssignees(
+    req.params.id as string,
+    req.body as ReplaceAssigneesInput,
+  );
+  res.status(200).json({ data });
+}
+
+export async function removeAssignee(req: Request, res: Response): Promise<void> {
+  await requestService.removeRequestAssignee(req.params.id as string, req.params.userId as string);
+  res.status(204).end();
+}
+
+export async function listRequestHistory(req: Request, res: Response): Promise<void> {
+  const data = await requestService.listRequestStatusHistory(req.params.id as string);
   res.status(200).json({ data });
 }
 

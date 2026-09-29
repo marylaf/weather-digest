@@ -36,9 +36,61 @@ export const updateRequestBodySchema = z.object({
 
 export const updateRequestStatusBodySchema = z.object({
   status: z.enum(REQUEST_STATUSES, { error: 'Недопустимое значение' }),
+  comment: z.string().trim().max(2000).optional(),
 });
 
+const assigneeHoursSchema = z
+  .union([z.number(), z.string().trim()])
+  .optional()
+  .refine(
+    (value) => {
+      if (value === undefined) {
+        return true;
+      }
+
+      const numeric = typeof value === 'number' ? value : Number(value);
+      return Number.isFinite(numeric) && numeric >= 0 && numeric <= 9999.99;
+    },
+    { error: 'hours должно быть числом от 0 до 9999.99' },
+  )
+  .transform((value) => {
+    if (value === undefined) {
+      return '0.00';
+    }
+
+    const numeric = typeof value === 'number' ? value : Number(value);
+    return numeric.toFixed(2);
+  });
+
+const assigneeItemSchema = z.object({
+  technicianId: z.string().trim().min(1, { error: 'technicianId обязателен' }),
+  role: z.enum(['lead', 'member'], { error: 'Недопустимое значение' }),
+  hours: assigneeHoursSchema,
+});
+
+export const replaceAssigneesBodySchema = z
+  .object({
+    assignees: z.array(assigneeItemSchema).min(1, { error: 'Нужен хотя бы один специалист' }),
+  })
+  .refine((value) => value.assignees.filter((item) => item.role === 'lead').length === 1, {
+    error: 'В бригаде должен быть ровно один специалист с ролью lead',
+    path: ['assignees'],
+  })
+  .refine(
+    (value) =>
+      new Set(value.assignees.map((item) => item.technicianId)).size === value.assignees.length,
+    {
+      error: 'Один специалист не может быть назначен дважды',
+      path: ['assignees'],
+    },
+  );
+
 export const requestIdParamsSchema = idParamsSchema;
+
+export const requestAssigneeParamsSchema = z.object({
+  id: z.string().trim().min(1, { error: 'id обязателен' }),
+  userId: z.string().trim().min(1, { error: 'userId обязателен' }),
+});
 
 export const requestListQuerySchema = z.object({
   status: z.enum(REQUEST_STATUSES, { error: 'Недопустимое значение' }).optional(),
