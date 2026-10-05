@@ -32,6 +32,9 @@ const config = {
   host: readRequired('DB_HOST'),
   port: readPort('DB_PORT'),
   dialect: 'postgres',
+  // Без этого повторный db:seed:all снова вставляет демо-строки и падает.
+  seederStorage: 'sequelize',
+  seederStorageTableName: 'SequelizeData',
 };
 
 module.exports = {

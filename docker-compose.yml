@@ -65,6 +65,27 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # Prometheus ходит в API напрямую, мимо Nginx: снаружи порта 9090 нет.
+  # Каталог /prometheus в образе недоступен пользователю nobody, поэтому база лежит в /tmp.
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/tmp/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:9090/-/healthy']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:11.6.0
     environment:
@@ -75,6 +96,11 @@ services:
       GF_SERVER_ROOT_URL: http://localhost/grafana/
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://127.0.0.1:3000/api/health']
       interval: 10s
