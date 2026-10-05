@@ -6,9 +6,11 @@ import { initMaintenanceRequestModel } from './maintenanceRequest.js';
 import { initRequestAssigneeModel } from './requestAssignee.js';
 import { initRequestSparePartModel } from './requestSparePart.js';
 import { initRequestStatusHistoryModel } from './requestStatusHistory.js';
+import { initRefreshTokenModel } from './refreshToken.js';
 import { initSparePartModel } from './sparePart.js';
 import { initSiteModel } from './site.js';
 import { initTechnicianModel } from './technician.js';
+import { initUserModel } from './user.js';
 
 export { Equipment } from './equipment.js';
 export { EquipmentPassport } from './equipmentPassport.js';
@@ -18,8 +20,10 @@ export { RequestSparePart } from './requestSparePart.js';
 export { SparePart } from './sparePart.js';
 export type { AssigneeRole } from './requestAssignee.js';
 export { RequestStatusHistory } from './requestStatusHistory.js';
+export { RefreshToken } from './refreshToken.js';
 export { Site } from './site.js';
 export { Technician } from './technician.js';
+export { User } from './user.js';
 
 let boundSequelize: Sequelize | undefined;
 
@@ -45,6 +49,8 @@ export function initModels(sequelize: Sequelize): void {
   initRequestAssigneeModel(sequelize);
   initSparePartModel(sequelize);
   initRequestSparePartModel(sequelize);
+  initUserModel(sequelize);
+  initRefreshTokenModel(sequelize);
   applyAssociations();
   boundSequelize = sequelize;
 }

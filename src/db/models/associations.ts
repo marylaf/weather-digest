@@ -1,6 +1,8 @@
 import { Equipment } from './equipment.js';
+import { RefreshToken } from './refreshToken.js';
 import { RequestSparePart } from './requestSparePart.js';
 import { SparePart } from './sparePart.js';
+import { User } from './user.js';
 import { EquipmentPassport } from './equipmentPassport.js';
 import { MaintenanceRequest } from './maintenanceRequest.js';
 import { RequestAssignee } from './requestAssignee.js';
@@ -128,6 +130,22 @@ export function applyAssociations(): void {
   RequestSparePart.belongsTo(SparePart, {
     foreignKey: 'sparePartId',
     onDelete: 'RESTRICT',
+    onUpdate: 'CASCADE',
+  });
+
+  User.belongsTo(Technician, {
+    foreignKey: 'technicianId',
+    onDelete: 'SET NULL',
+    onUpdate: 'CASCADE',
+  });
+  User.hasMany(RefreshToken, {
+    foreignKey: 'userId',
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  });
+  RefreshToken.belongsTo(User, {
+    foreignKey: 'userId',
+    onDelete: 'CASCADE',
     onUpdate: 'CASCADE',
   });
 }
