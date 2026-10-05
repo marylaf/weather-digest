@@ -12,6 +12,7 @@ import { requestId } from './middlewares/requestId.js';
 import { requestLogger } from './middlewares/requestLogger.js';
 import { requireAccessToken } from './middlewares/requireAccessToken.js';
 import { authRouter } from './routes/auth.routes.js';
+import { docsRouter } from './routes/docs.routes.js';
 import { equipmentRouter } from './routes/equipment.routes.js';
 import { healthRouter } from './routes/health.routes.js';
 import { metricsRouter } from './routes/metrics.routes.js';
@@ -37,6 +38,8 @@ app.use(
 );
 app.use(createCorsMiddleware());
 app.use(express.json({ limit: jsonBodyLimit }));
+// Документация до лимита: страница Swagger тянет несколько своих файлов.
+app.use('/api/docs', docsRouter);
 app.use('/api', apiRateLimiter);
 app.use('/api/auth', authRouter);
 app.use('/api', healthRouter);
