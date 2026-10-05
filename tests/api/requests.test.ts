@@ -84,8 +84,8 @@ describe('/api/requests', () => {
 
   it('отдаёт список заявок с фильтром по статусу', async () => {
     const equipment = await createEquipment();
-    await createRequest(equipment.id, { title: 'First open request' });
-    const second = await createRequest(equipment.id, { title: 'Second open request' });
+    await createRequest(equipment.id, { title: 'Первая открытая заявка' });
+    const second = await createRequest(equipment.id, { title: 'Вторая открытая заявка' });
     await withApiKey(api().patch(`/api/requests/${second.id}/status`))
       .send({ status: 'rejected' })
       .expect(200);
@@ -94,20 +94,20 @@ describe('/api/requests', () => {
 
     expect(response.body.meta).toEqual({ total: 1, page: 1, limit: 10 });
     expect(response.body.data).toHaveLength(1);
-    expect(response.body.data[0]).toMatchObject({ title: 'First open request', status: 'new' });
+    expect(response.body.data[0]).toMatchObject({ title: 'Первая открытая заявка', status: 'new' });
   });
 
   it('обновляет поля заявки без смены статуса', async () => {
     const equipment = await createEquipment();
     const requestItem = await createRequest(equipment.id);
     const response = await withApiKey(api().patch(`/api/requests/${requestItem.id}`))
-      .send({ title: 'Updated request title', priority: 'high' })
+      .send({ title: 'Обновлённый заголовок заявки', priority: 'high' })
       .expect(200);
 
     expect(response.body.data).toMatchObject({
       id: requestItem.id,
       status: 'new',
-      title: 'Updated request title',
+      title: 'Обновлённый заголовок заявки',
       priority: 'high',
     });
     expect(response.body.data.updatedAt).not.toBe(requestItem.updatedAt);
@@ -176,7 +176,7 @@ describe('/api/requests', () => {
 
   it('добавляет назначенных техников с ролью и не меняет прежние поля', async () => {
     const equipment = await createEquipment();
-    const requestItem = await createRequest(equipment.id, { title: 'Assign technicians' });
+    const requestItem = await createRequest(equipment.id, { title: 'Назначение техников' });
     initModels(getSequelize());
     const technician = await Technician.create({
       fullName: 'Иванов Алексей',
@@ -195,7 +195,7 @@ describe('/api/requests', () => {
     expect(response.body.data).toMatchObject({
       id: requestItem.id,
       equipmentId: equipment.id,
-      title: 'Assign technicians',
+      title: 'Назначение техников',
       status: 'new',
       priority: requestItem.priority,
     });
@@ -239,7 +239,7 @@ describe('/api/requests', () => {
   describe('бригада и история статусов', () => {
     it('заменяет бригаду и оставляет ровно одного lead', async () => {
       const equipment = await createEquipment();
-      const requestItem = await createRequest(equipment.id, { title: 'Brigade request' });
+      const requestItem = await createRequest(equipment.id, { title: 'Заявка на бригаду' });
       const lead = await createTechnician('lead-brigade');
       const member = await createTechnician('member-brigade');
 
@@ -418,8 +418,8 @@ describe('/api/requests', () => {
     it('создаёт все валидные заявки и возвращает отчёт', async () => {
       const equipment = await createEquipment();
       const items = [
-        requestPayload(equipment.id, { title: 'First import request' }),
-        requestPayload(equipment.id, { title: 'Second import request', priority: 'high' }),
+        requestPayload(equipment.id, { title: 'Первая импортированная заявка' }),
+        requestPayload(equipment.id, { title: 'Вторая импортированная заявка', priority: 'high' }),
       ];
 
       const response = await withApiKey(api().post('/api/requests/import'))
@@ -431,12 +431,12 @@ describe('/api/requests', () => {
       expect(response.body.results[0]).toMatchObject({
         index: 0,
         ok: true,
-        data: { title: 'First import request', status: 'new', equipmentId: equipment.id },
+        data: { title: 'Первая импортированная заявка', status: 'new', equipmentId: equipment.id },
       });
       expect(response.body.results[1]).toMatchObject({
         index: 1,
         ok: true,
-        data: { title: 'Second import request', priority: 'high' },
+        data: { title: 'Вторая импортированная заявка', priority: 'high' },
       });
 
       const listed = await api().get('/api/requests').expect(200);
@@ -446,9 +446,9 @@ describe('/api/requests', () => {
     it('принимает валидные записи и сообщает об ошибках остальных', async () => {
       const equipment = await createEquipment();
       const items = [
-        requestPayload(equipment.id, { title: 'Valid import request' }),
+        requestPayload(equipment.id, { title: 'Корректная импортированная заявка' }),
         { ...requestPayload(equipment.id), title: 'abc' },
-        requestPayload('missing-equipment', { title: 'Unknown equipment request' }),
+        requestPayload('missing-equipment', { title: 'Заявка на неизвестное оборудование' }),
       ];
 
       const response = await withApiKey(api().post('/api/requests/import'))
@@ -459,7 +459,7 @@ describe('/api/requests', () => {
       expect(response.body.results[0]).toMatchObject({
         index: 0,
         ok: true,
-        data: { title: 'Valid import request' },
+        data: { title: 'Корректная импортированная заявка' },
       });
       expect(response.body.results[1]).toMatchObject({
         index: 1,
@@ -477,7 +477,7 @@ describe('/api/requests', () => {
 
       const listed = await api().get('/api/requests').expect(200);
       expect(listed.body.meta.total).toBe(1);
-      expect(listed.body.data[0]).toMatchObject({ title: 'Valid import request' });
+      expect(listed.body.data[0]).toMatchObject({ title: 'Корректная импортированная заявка' });
     });
 
     it('возвращает отчёт, если все записи отклонены', async () => {

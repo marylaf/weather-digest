@@ -404,7 +404,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Inspect turbine blades\",\n  \"description\": \"Scheduled inspection\",\n  \"priority\": \"high\",\n  \"plannedAt\": \"2026-10-01T10:00:00.000Z\"\n}",
+              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Осмотр лопастей турбины\",\n  \"description\": \"Плановый осмотр\",\n  \"priority\": \"high\",\n  \"plannedAt\": \"2026-10-01T10:00:00.000Z\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -748,7 +748,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Assignee probe request\",\n  \"description\": \"Scheduled inspection\",\n  \"priority\": \"high\"\n}",
+              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Заявка для проверки бригады\",\n  \"description\": \"Плановый осмотр\",\n  \"priority\": \"high\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1400,7 +1400,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Status probe request\",\n  \"description\": \"Scheduled inspection\",\n  \"priority\": \"high\"\n}",
+              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Заявка для проверки статуса\",\n  \"description\": \"Плановый осмотр\",\n  \"priority\": \"high\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1865,7 +1865,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"equipmentId\": \"00000000-0000-4000-8000-000000000000\",\n  \"title\": \"Inspect turbine blades\",\n  \"description\": \"Test request for missing equipment\",\n  \"priority\": \"high\",\n  \"plannedAt\": \"2026-10-01T10:00:00.000Z\"\n}",
+              "raw": "{\n  \"equipmentId\": \"00000000-0000-4000-8000-000000000000\",\n  \"title\": \"Осмотр лопастей турбины\",\n  \"description\": \"Тестовая заявка на отсутствующее оборудование\",\n  \"priority\": \"high\",\n  \"plannedAt\": \"2026-10-01T10:00:00.000Z\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1911,7 +1911,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Request for status test\",\n  \"description\": \"Used for invalid status transition\",\n  \"priority\": \"medium\"\n}",
+              "raw": "{\n  \"equipmentId\": \"{{equipmentId}}\",\n  \"title\": \"Заявка для проверки статуса\",\n  \"description\": \"Проверка недопустимого перехода статуса\",\n  \"priority\": \"medium\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
