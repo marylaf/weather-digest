@@ -8,7 +8,6 @@ import {
   ValidationError,
 } from '../../errors/httpErrors.js';
 import type {
-  AssigneeInput,
   CreateRequestInput,
   ImportRequestError,
   ImportRequestItemResult,
@@ -25,15 +24,13 @@ import * as equipmentRepository from '../repositories/equipment.repository.js';
 import { ensureDb } from '../repositories/db.js';
 import * as requestRepository from '../repositories/request.repository.js';
 import { createRequestBodySchema } from '../validators/request.js';
+import {
+  assertBrigade,
+  assertInProgressHasTechnicians,
+  assertStatusTransition,
+} from './requestRules.js';
 
 const STATUS_CHANGE_ACTOR = 'api';
-
-const STATUS_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
-  new: ['in_progress', 'rejected'],
-  in_progress: ['done', 'rejected'],
-  done: [],
-  rejected: [],
-};
 
 export async function createRequest(payload: CreateRequestInput): Promise<MaintenanceRequest> {
   await assertEquipmentExists(payload.equipmentId);
@@ -179,10 +176,7 @@ export async function updateRequestStatus(
 
     if (status === 'in_progress') {
       const assigneeCount = await requestRepository.countAssignees(id, transaction);
-
-      if (assigneeCount === 0) {
-        throw new ConflictError('Cannot set status to in_progress without assigned technicians');
-      }
+      assertInProgressHasTechnicians(assigneeCount);
     }
 
     await requestRepository.updateStatus(id, status, transaction);
@@ -316,38 +310,6 @@ function toImportError(error: HttpAppError): ImportRequestError {
   }
 
   return mapped;
-}
-
-function assertStatusTransition(from: RequestStatus, to: RequestStatus): void {
-  if (!STATUS_TRANSITIONS[from].includes(to)) {
-    throw new ConflictError(`Cannot transition status from ${from} to ${to}`);
-  }
-}
-
-function assertBrigade(assignees: readonly AssigneeInput[]): void {
-  const details: { field: string; message: string }[] = [];
-  const leadCount = assignees.filter((assignee) => assignee.role === 'lead').length;
-
-  if (assignees.length === 0) {
-    details.push({ field: 'assignees', message: 'Нужен хотя бы один специалист' });
-  }
-
-  if (leadCount !== 1) {
-    details.push({
-      field: 'assignees',
-      message: 'В бригаде должен быть ровно один специалист с ролью lead',
-    });
-  }
-
-  const technicianIds = assignees.map((assignee) => assignee.technicianId);
-
-  if (new Set(technicianIds).size !== technicianIds.length) {
-    throw new ConflictError('Technician is already assigned to this request');
-  }
-
-  if (details.length > 0) {
-    throw new ValidationError(details);
-  }
 }
 
 async function assertTechniciansExist(
