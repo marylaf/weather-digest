@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import { ForbiddenError, UnauthorizedError } from '../../errors/httpErrors.js';
-import type { UserRole } from '../../types/auth.js';
+import type { AccessPrincipal, UserRole } from '../../types/auth.js';
 import * as requestRepository from '../repositories/request.repository.js';
 
 /**
@@ -41,34 +41,50 @@ export const requireAssignedTechnician: RequestHandler = (req, _res, next) => {
 
 async function assertAssigned(req: Parameters<RequestHandler>[0]): Promise<void> {
   const user = req.user;
+  const requestId = typeof req.params.id === 'string' ? req.params.id : undefined;
+  let requestFound = false;
+  let isAssigned = false;
 
-  if (!user) {
+  if (user && user.role !== 'admin' && requestId !== undefined) {
+    const request = await requestRepository.findById(requestId);
+    requestFound = request !== null;
+
+    if (requestFound && user.technicianId) {
+      isAssigned = await requestRepository.isTechnicianAssigned(requestId, user.technicianId);
+    }
+  }
+
+  assertAssignedTechnicianAccess({
+    user,
+    requestId,
+    requestFound,
+    isAssigned,
+  });
+}
+
+export function assertAssignedTechnicianAccess(input: {
+  user: AccessPrincipal | undefined;
+  requestId: string | undefined;
+  requestFound: boolean;
+  isAssigned: boolean;
+}): void {
+  if (!input.user) {
     throw new UnauthorizedError('Missing or invalid access token');
   }
 
-  if (user.role === 'admin') {
+  if (input.user.role === 'admin') {
     return;
   }
 
-  const requestId = req.params.id;
-
-  if (typeof requestId !== 'string') {
+  if (input.requestId === undefined) {
     throw new ForbiddenError('Technician is not assigned to this request');
   }
 
-  const request = await requestRepository.findById(requestId);
-
-  if (!request) {
+  if (!input.requestFound) {
     return;
   }
 
-  if (!user.technicianId) {
-    throw new ForbiddenError('Technician is not assigned to this request');
-  }
-
-  const assigned = await requestRepository.isTechnicianAssigned(requestId, user.technicianId);
-
-  if (!assigned) {
+  if (!input.user.technicianId || !input.isAssigned) {
     throw new ForbiddenError('Technician is not assigned to this request');
   }
 }
