@@ -20,6 +20,7 @@ export function createCorsMiddleware() {
     methods: ALLOWED_METHODS,
     allowedHeaders: ['Content-Type', 'X-Request-Id', 'X-API-Key', 'Authorization'],
     exposedHeaders: ['X-Request-Id'],
+    credentials: true,
     optionsSuccessStatus: 204,
   };
 

@@ -9,6 +9,7 @@ import {
 } from '../controllers/equipment.controller.js';
 import { listRequestsByEquipmentId } from '../controllers/request.controller.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import { requireRoles } from '../middlewares/requireRole.js';
 import { validate } from '../middlewares/validate.js';
 import {
   createEquipmentBodySchema,
@@ -28,6 +29,7 @@ equipmentRouter.get(
 );
 equipmentRouter.post(
   '/',
+  requireRoles('admin'),
   validate({ body: createEquipmentBodySchema }),
   asyncHandler(createEquipment),
 );
@@ -48,11 +50,13 @@ equipmentRouter.get(
 );
 equipmentRouter.patch(
   '/:id',
+  requireRoles('admin'),
   validate({ params: equipmentIdParamsSchema, body: updateEquipmentBodySchema }),
   asyncHandler(updateEquipment),
 );
 equipmentRouter.delete(
   '/:id',
+  requireRoles('admin'),
   validate({ params: equipmentIdParamsSchema }),
   asyncHandler(deleteEquipment),
 );

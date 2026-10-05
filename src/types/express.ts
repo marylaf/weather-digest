@@ -1,3 +1,5 @@
+import type { AccessPrincipal } from './auth.js';
+
 export {};
 
 declare global {
@@ -6,6 +8,7 @@ declare global {
   namespace Express {
     interface Request {
       requestId: string;
+      user?: AccessPrincipal;
     }
   }
 }

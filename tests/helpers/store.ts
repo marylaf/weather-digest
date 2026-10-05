@@ -15,6 +15,8 @@ export async function resetStore(): Promise<void> {
     await client.connect();
     await client.query(`
       TRUNCATE TABLE
+        refresh_tokens,
+        users,
         request_spare_parts,
         request_assignees,
         request_status_history,

@@ -1,4 +1,5 @@
 export type Units = 'metric' | 'imperial';
+export type CookieSameSite = 'lax' | 'strict' | 'none';
 
 export interface AppConfig {
   geocodingUrl: string;
@@ -13,5 +14,10 @@ export interface AppConfig {
   rateLimitWindowMs: number;
   rateLimitMax: number;
   jsonBodyLimit: string;
-  apiKey: string;
+  accessTokenSecret: string;
+  refreshTokenSecret: string;
+  accessTokenTtlSeconds: number;
+  refreshTokenTtlSeconds: number;
+  cookieSecure: boolean;
+  cookieSameSite: CookieSameSite;
 }
