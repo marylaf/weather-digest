@@ -22,6 +22,8 @@ const { jsonBodyLimit } = loadConfig();
 const publicDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../public');
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(requestId);
 app.use(requestLogger);
 app.use(

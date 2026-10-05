@@ -1,10 +1,15 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-COPY package.json package-lock.json tsconfig.json ./
+COPY package.json package-lock.json tsconfig.json .sequelizerc ./
 COPY src ./src
+COPY scripts ./scripts
 
 RUN npm ci && npm run build
+
+FROM build AS migrate
+
+CMD ["sh", "-c", "node scripts/ensure-app-role.cjs && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all"]
 
 FROM node:20-alpine
 WORKDIR /app

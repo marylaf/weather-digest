@@ -22,8 +22,8 @@ export function requestPayload(
 ): CreateRequestInput {
   return {
     equipmentId,
-    title: 'Inspect turbine blades',
-    description: 'Routine visual inspection',
+    title: 'Осмотр лопастей турбины',
+    description: 'Плановый визуальный осмотр',
     priority: 'medium',
     ...overrides,
   };

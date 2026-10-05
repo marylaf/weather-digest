@@ -12,12 +12,22 @@ if (!accessTokenSecret || !refreshTokenSecret) {
   process.exit(1);
 }
 
-try {
-  await connectDatabase();
-} catch (error) {
-  const message = error instanceof Error ? error.message : 'Failed to connect to PostgreSQL';
-  logger.error({ err: error }, message);
-  process.exit(1);
+for (let attempt = 1; attempt <= 30; attempt += 1) {
+  try {
+    await connectDatabase();
+    break;
+  } catch (error) {
+    if (attempt === 30) {
+      const message = error instanceof Error ? error.message : 'Failed to connect to PostgreSQL';
+      logger.error({ err: error }, message);
+      process.exit(1);
+    }
+
+    logger.warn({ attempt }, 'PostgreSQL is not ready, retrying');
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2000);
+    });
+  }
 }
 
 const server: Server = app.listen(port, () => {

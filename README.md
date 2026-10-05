@@ -15,13 +15,21 @@ git clone https://github.com/marylaf/weather-digest.git
 cd weather-digest
 cp .env.example .env
 npm install
-docker compose up -d --wait postgres
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait postgres
 npm run db:migrate
 npm run db:seed
 npm run api
 ```
 
-`DB_HOST=localhost` в `.env.example` — это хост, с которого запускаются `npm run api` и `sequelize-cli`. В контейнере `api` хост переопределён на `postgres`. Пароли и `API_KEY` берутся из `.env`, в репозиторий их не кладут.
+`docker-compose.dev.yml` открывает PostgreSQL на `127.0.0.1`. В обычном `docker compose up` этот порт снаружи не публикуется. `DB_HOST=localhost` в `.env.example` — хост для `npm run api` и `sequelize-cli` на машине. В контейнерах `api` и `migrate` хост переопределён на `postgres`. Пароли и `API_KEY` берутся из `.env`, в репозиторий их не кладут.
+
+Nginx, API, PostgreSQL и Grafana вместе с миграциями и сидами:
+
+```bash
+docker compose up -d --build
+```
+
+Клиент ходит на `http://localhost`. Повторить миграции и сиды: `docker compose run --rm migrate`.
 
 API подключается как `DB_APP_USER`. Эта роль читает и меняет рабочие таблицы, в `request_status_history` может только вставлять строки. `UPDATE` и `DELETE` журнала ей не выданы, как и право создавать объекты в схеме. Миграции и сиды выполняет владелец `DB_USER`: `npm run db:migrate` сначала создаёт роль приложения (`scripts/ensure-app-role.cjs`), затем накатывает миграции и выдаёт права.
 
@@ -29,13 +37,13 @@ API подключается как `DB_APP_USER`. Эта роль читает 
 
 ## PostgreSQL
 
-Контейнер `postgres` — образ `postgres:16-alpine`. Имя базы, пользователь и пароль берутся из `DB_NAME`, `DB_USER`, `DB_PASSWORD` (без них compose не стартует). Порт на хосте — `DB_PORT`, по умолчанию `5432`. Данные — volume `postgres_data`. Healthcheck — `pg_isready`.
+Контейнер `postgres` — образ `postgres:16-alpine`. Имя базы, пользователь и пароль берутся из `DB_NAME`, `DB_USER`, `DB_PASSWORD` (без них compose не стартует). На хост порт не пробрасывается. Для `npm run api` его открывает `docker-compose.dev.yml` на `127.0.0.1:${DB_PORT:-5432}`. Данные — volume `postgres_data`. Healthcheck — `pg_isready`.
 
 ```bash
-docker compose up -d --wait postgres
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait postgres
 ```
 
-`docker compose up --build api` поднимает и Postgres (у `api` стоит `depends_on` с `condition: service_healthy`), но таблицы сам не создаёт. Миграции по-прежнему с хоста.
+`docker compose up -d --build` поднимает Nginx, API, Postgres и Grafana. Сервис `migrate` сначала создаёт роль приложения, накатывает миграции и сиды. API стартует после этого и несколько раз повторяет подключение, если база ещё не готова.
 
 ### Миграции
 
@@ -71,8 +79,8 @@ npm run db:migrate
 Если нужно выбросить и данные volume:
 
 ```bash
-docker compose down -v
-docker compose up -d --wait postgres
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait postgres
 npm run db:migrate
 npm run db:seed
 ```
@@ -668,44 +676,57 @@ docs/postman/
 
 ## Docker
 
-Образ API собирается из `Dockerfile` (`node:20-alpine`, `npm run build`, потом `node dist/api/server.js`). Миграции в образ не зашиты: их запускают с хоста, пока Postgres уже слушает порт.
+`docker compose up -d --build` поднимает Nginx, API, PostgreSQL, Grafana и один раз выполняет `migrate`. Снаружи открыт только порт 80. API и PostgreSQL с хоста не доступны, клиент ходит через Nginx: `http://localhost/api/...`, страница заявок — `/`.
+
+`/metrics` и `/grafana/` закрыты basic auth: логин `metrics`, пароль `change_me_metrics`. У Grafana свой логин `admin` и пароль `GRAFANA_ADMIN_PASSWORD`.
+
+Образ API — multi-stage: сборка отдельно, в финальный образ попадают только production-зависимости, процесс идёт от пользователя `app`. `sequelize-cli` остаётся в стадии `migrate`. Конфиг Nginx — `deploy/nginx/default.conf`. Данные Postgres — volume `postgres_data`, данные Grafana — `grafana_data`.
 
 ```bash
-docker compose up --build api
+docker compose up -d --build
+docker compose run --rm migrate
+docker compose down
 ```
 
-Миграции к этому моменту уже применены с хоста, как в разделе «Запуск с нуля»: контейнер таблиц не создаёт. API слушает `http://localhost:3000` (`GET /api/health`, HTML на `/`). В контейнер смонтирован `./public`, `DB_HOST` внутри него — `postgres`. Том базы — `postgres_data`. CLI-сводка по городам: `docker compose run --rm weather-digest`.
+Повторный `migrate` пропускает уже применённые миграции и сиды. Локальный `npm run api` по-прежнему ходит в Postgres на localhost:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait postgres
+```
+
+В контейнер API смонтирован `./public`, `DB_HOST` внутри него — `postgres`. CLI-сводка по городам: `docker compose run --rm weather-digest`.
 
 ## Переменные окружения
 
-| Переменная             | Описание                                                                                                  | По умолчанию                                  |
-| ---------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `PORT`                 | порт API                                                                                                  | `3000`                                        |
-| `NODE_ENV`             | `development` или `production` (в production нет стека)                                                   | `development`                                 |
-| `API_KEY`              | секрет для POST/PATCH/DELETE. Обязателен для `npm run api`                                                | —                                             |
-| `CORS_ORIGINS`         | origin через запятую, без `*`                                                                             | `http://localhost:5173,http://localhost:3000` |
-| `RATE_LIMIT_WINDOW_MS` | окно лимита, мс                                                                                           | `60000`                                       |
-| `RATE_LIMIT_MAX`       | запросов на IP за окно                                                                                    | `100`                                         |
-| `JSON_BODY_LIMIT`      | максимум JSON body                                                                                        | `100kb`                                       |
-| `EQUIPMENT_FILE`       | JSON Кейса 2 для сида импорта. Вместе с `REQUESTS_FILE`; если нет обоих файлов, импорт пропускается       | `./data/equipment.json`                       |
-| `REQUESTS_FILE`        | JSON заявок Кейса 2 для того же сида                                                                      | `./data/requests.json`                        |
-| `FORECAST_URL`         | прогноз Open-Meteo                                                                                        | `https://api.open-meteo.com/v1/forecast`      |
-| `TIMEOUT_MS`           | таймаут исходящих запросов                                                                                | `5000`                                        |
-| `REQUEST_TIMEOUT_MS`   | то же, имеет приоритет над `TIMEOUT_MS`                                                                   | —                                             |
-| `MAX_WIND_SPEED`       | порог ветра для наружных работ                                                                            | `10`                                          |
-| `UNITS`                | `metric` (°C, мм, м/с) или `imperial` (°F, in, mph)                                                       | `metric`                                      |
-| `LOG_LEVEL`            | уровень pino: `debug` / `info` / `warn` / `error`                                                         | `debug` в development, `info` в production    |
-| `DB_HOST`              | хост PostgreSQL. Для процесса на хосте — `localhost`; compose для контейнера `api` подставляет `postgres` | —                                             |
-| `DB_PORT`              | порт PostgreSQL                                                                                           | `5432` у compose, если переменная не задана   |
-| `DB_NAME`              | имя базы, обязательно                                                                                     | —                                             |
-| `DB_USER`              | владелец схемы для миграций и сидов, обязательно                                                          | —                                             |
-| `DB_PASSWORD`          | пароль владельца, обязательно                                                                             | —                                             |
-| `DB_APP_USER`          | роль API: DML по рабочим таблицам, по журналу статусов только `SELECT` и `INSERT`                         | —                                             |
-| `DB_APP_PASSWORD`      | пароль роли API, обязательно                                                                              | —                                             |
-| `DB_POOL_MAX`          | максимум соединений Sequelize                                                                             | `5`                                           |
-| `DB_POOL_MIN`          | минимум, не больше `DB_POOL_MAX`                                                                          | `0`                                           |
-| `DB_POOL_ACQUIRE_MS`   | ожидание соединения из пула, мс                                                                           | `30000`                                       |
-| `DB_POOL_IDLE_MS`      | простой соединения до закрытия, мс                                                                        | `10000`                                       |
+| Переменная               | Описание                                                                                                  | По умолчанию                                  |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `PORT`                   | порт API                                                                                                  | `3000`                                        |
+| `NODE_ENV`               | `development` или `production` (в production нет стека)                                                   | `development`                                 |
+| `API_KEY`                | секрет для POST/PATCH/DELETE. Обязателен для `npm run api`                                                | —                                             |
+| `CORS_ORIGINS`           | origin через запятую, без `*`                                                                             | `http://localhost:5173,http://localhost:3000` |
+| `RATE_LIMIT_WINDOW_MS`   | окно лимита, мс                                                                                           | `60000`                                       |
+| `RATE_LIMIT_MAX`         | запросов на IP за окно                                                                                    | `100`                                         |
+| `JSON_BODY_LIMIT`        | максимум JSON body                                                                                        | `100kb`                                       |
+| `EQUIPMENT_FILE`         | JSON Кейса 2 для сида импорта. Вместе с `REQUESTS_FILE`; если нет обоих файлов, импорт пропускается       | `./data/equipment.json`                       |
+| `REQUESTS_FILE`          | JSON заявок Кейса 2 для того же сида                                                                      | `./data/requests.json`                        |
+| `FORECAST_URL`           | прогноз Open-Meteo                                                                                        | `https://api.open-meteo.com/v1/forecast`      |
+| `TIMEOUT_MS`             | таймаут исходящих запросов                                                                                | `5000`                                        |
+| `REQUEST_TIMEOUT_MS`     | то же, имеет приоритет над `TIMEOUT_MS`                                                                   | —                                             |
+| `MAX_WIND_SPEED`         | порог ветра для наружных работ                                                                            | `10`                                          |
+| `UNITS`                  | `metric` (°C, мм, м/с) или `imperial` (°F, in, mph)                                                       | `metric`                                      |
+| `LOG_LEVEL`              | уровень pino: `debug` / `info` / `warn` / `error`                                                         | `debug` в development, `info` в production    |
+| `DB_HOST`                | хост PostgreSQL. Для процесса на хосте — `localhost`; compose для контейнера `api` подставляет `postgres` | —                                             |
+| `DB_PORT`                | порт PostgreSQL                                                                                           | `5432` у compose, если переменная не задана   |
+| `DB_NAME`                | имя базы, обязательно                                                                                     | —                                             |
+| `DB_USER`                | владелец схемы для миграций и сидов, обязательно                                                          | —                                             |
+| `DB_PASSWORD`            | пароль владельца, обязательно                                                                             | —                                             |
+| `DB_APP_USER`            | роль API: DML по рабочим таблицам, по журналу статусов только `SELECT` и `INSERT`                         | —                                             |
+| `DB_APP_PASSWORD`        | пароль роли API, обязательно                                                                              | —                                             |
+| `DB_POOL_MAX`            | максимум соединений Sequelize                                                                             | `5`                                           |
+| `DB_POOL_MIN`            | минимум, не больше `DB_POOL_MAX`                                                                          | `0`                                           |
+| `DB_POOL_ACQUIRE_MS`     | ожидание соединения из пула, мс                                                                           | `30000`                                       |
+| `DB_POOL_IDLE_MS`        | простой соединения до закрытия, мс                                                                        | `10000`                                       |
+| `GRAFANA_ADMIN_PASSWORD` | пароль Grafana, логин `admin`                                                                             | —                                             |
 
 CLI-сводка по городам (`npm start -- --city "Москва"`) использует те же `CITY`, `DAYS`, `NO_CACHE`, `GEOCODING_URL`, `REPORTS_DIR`.
 
@@ -719,20 +740,22 @@ CLI-сводка по городам (`npm start -- --city "Москва"`) ис
 
 ## Команды
 
-| Команда                                | Назначение                                         |
-| -------------------------------------- | -------------------------------------------------- |
-| `npm run api`                          | Express API и HTML заявок на `:3000`               |
-| `npm run api:dev`                      | то же с перезапуском                               |
-| `npm test`                             | Jest + Supertest                                   |
-| `npm run typecheck`                    | `tsc --noEmit`                                     |
-| `npm run lint`                         | ESLint и Prettier                                  |
-| `npm run web`                          | Vite, сохранённые отчёты на `:5173`                |
-| `npm start -- --city "Москва"`         | CLI-сводка погоды                                  |
-| `npm run db:migrate`                   | применить миграции                                 |
-| `npm run db:migrate:undo`              | откатить последнюю                                 |
-| `npm run db:migrate:undo:all`          | откатить все                                       |
-| `npm run db:seed`                      | демо-данные и импорт JSON, если оба файла на месте |
-| `npm run db:seed:undo:all`             | откатить сиды                                      |
-| `docker compose up -d --wait postgres` | поднять Postgres и дождаться healthcheck           |
-| `docker compose up --build api`        | API в контейнере, Postgres поднимется вместе с ним |
-| `docker compose down -v`               | остановить и удалить volume базы                   |
+| Команда                                                                                | Назначение                                         |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `npm run api`                                                                          | Express API и HTML заявок на `:3000`               |
+| `npm run api:dev`                                                                      | то же с перезапуском                               |
+| `npm test`                                                                             | Jest + Supertest                                   |
+| `npm run typecheck`                                                                    | `tsc --noEmit`                                     |
+| `npm run lint`                                                                         | ESLint и Prettier                                  |
+| `npm run web`                                                                          | Vite, сохранённые отчёты на `:5173`                |
+| `npm start -- --city "Москва"`                                                         | CLI-сводка погоды                                  |
+| `npm run db:migrate`                                                                   | применить миграции                                 |
+| `npm run db:migrate:undo`                                                              | откатить последнюю                                 |
+| `npm run db:migrate:undo:all`                                                          | откатить все                                       |
+| `npm run db:seed`                                                                      | демо-данные и импорт JSON, если оба файла на месте |
+| `npm run db:seed:undo:all`                                                             | откатить сиды                                      |
+| `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait postgres` | Postgres на localhost для npm                      |
+| `docker compose up -d --build`                                                         | Nginx, API, Postgres, Grafana и migrate            |
+| `docker compose run --rm migrate`                                                      | миграции и сиды в контейнере                       |
+| `docker compose down`                                                                  | остановить и удалить контейнеры                    |
+| `docker compose down -v`                                                               | то же и удалить volumes                            |

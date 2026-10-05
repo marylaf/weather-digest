@@ -209,7 +209,9 @@ describe('/api/equipment', () => {
 
   it('возвращает заявки по оборудованию', async () => {
     const equipment = await createEquipment();
-    const requestItem = await createRequest(equipment.id, { title: 'Check inverter fans' });
+    const requestItem = await createRequest(equipment.id, {
+      title: 'Проверка вентиляторов инвертора',
+    });
 
     const response = await api().get(`/api/equipment/${equipment.id}/requests`).expect(200);
     expect(response.body.meta).toEqual({ total: 1, page: 1, limit: 10 });

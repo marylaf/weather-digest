@@ -1,5 +1,6 @@
 services:
   weather-digest:
+    profiles: ['cli']
     build: .
     image: weather-digest:local
     command: ['node', 'dist/index.js']
@@ -8,12 +9,11 @@ services:
     volumes:
       - ./reports:/app/reports
 
-  api:
-    build: .
-    image: weather-digest:local
-    command: ['node', 'dist/api/server.js']
-    ports:
-      - '${PORT:-3000}:${PORT:-3000}'
+  migrate:
+    build:
+      context: .
+      target: migrate
+    image: weather-digest:migrate
     env_file:
       - .env
     environment:
@@ -22,8 +22,32 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    restart: 'no'
+
+  api:
+    build: .
+    image: weather-digest:local
+    command: ['node', 'dist/api/server.js']
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: '5432'
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     volumes:
       - ./public:/app/public
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/api/health']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
 
   postgres:
     image: postgres:16-alpine
@@ -31,8 +55,6 @@ services:
       POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
       POSTGRES_USER: ${DB_USER:?DB_USER is required}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-    ports:
-      - '${DB_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -41,6 +63,46 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+      GF_SERVER_ROOT_URL: http://localhost/grafana/
+    volumes:
+      - grafana_data:/var/lib/grafana
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:3000/api/health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - '80:80'
+    volumes:
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1/api/health']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  grafana_data:

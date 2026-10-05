@@ -51,18 +51,21 @@ describe('reports', () => {
       location: { lat: 59.93, lon: 30.31 },
     });
 
-    const doneRequest = await createRequest(alpha.id, { priority: 'high', title: 'Close blades' });
+    const doneRequest = await createRequest(alpha.id, {
+      priority: 'high',
+      title: 'Закрытие осмотра лопастей',
+    });
     const openRequest = await createRequest(alpha.id, {
       priority: 'low',
-      title: 'Open inspection',
+      title: 'Открытый осмотр',
     });
     const rejectedRequest = await createRequest(alpha.id, {
       priority: 'critical',
-      title: 'Reject visit',
+      title: 'Отклонённый выезд',
     });
     const foreignRequest = await createRequest(other.id, {
       priority: 'medium',
-      title: 'Foreign request',
+      title: 'Чужая заявка',
     });
 
     initModels(getSequelize());
@@ -186,8 +189,8 @@ describe('reports', () => {
       type: 'inverter',
       location: { lat: 55.75, lon: 37.62 },
     });
-    const january = await createRequest(alpha.id, { title: 'January visit' });
-    const february = await createRequest(alpha.id, { title: 'February visit' });
+    const january = await createRequest(alpha.id, { title: 'Январский выезд' });
+    const february = await createRequest(alpha.id, { title: 'Февральский выезд' });
     initModels(getSequelize());
     await stampRequest(january.id, {
       status: 'done',
