@@ -41,7 +41,6 @@ export function loadConfig(): AppConfig {
       'RATE_LIMIT_MAX',
     ),
     jsonBodyLimit: process.env.JSON_BODY_LIMIT?.trim() || DEFAULT_JSON_BODY_LIMIT,
-    apiKey: process.env.API_KEY?.trim() ?? '',
     ...readAuthConfig(),
   };
 }

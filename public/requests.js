@@ -31,7 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const nextPage = document.querySelector('#next-page');
 
   restoreApiKey();
-  getApiKeyInput().addEventListener('change', persistApiKey);
+  getApiKeyInput().addEventListener('change', () => {
+    persistApiKey();
+    void bootstrap();
+  });
 
   filtersForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -97,11 +100,9 @@ async function apiFetch(path, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  if (options.auth) {
-    const apiKey = getApiKey();
-    if (apiKey) {
-      headers['X-API-Key'] = apiKey;
-    }
+  const accessToken = getApiKey();
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
   }
 
   const response = await fetch(path, {

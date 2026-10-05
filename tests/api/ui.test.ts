@@ -17,6 +17,7 @@ describe('страница заявок', () => {
 
     expect(response.headers['content-type']).toMatch(/javascript|ecmascript/);
     expect(response.text).toContain('/api/requests');
-    expect(response.text).toContain('X-API-Key');
+    expect(response.text).toContain('Authorization');
+    expect(response.text).toContain('Bearer');
   });
 });

@@ -5,10 +5,10 @@ import { closeDatabase, connectDatabase } from '../db/database.js';
 import { logger } from '../logger.js';
 import { app } from './app.js';
 
-const { port, apiKey } = loadConfig();
+const { port, accessTokenSecret, refreshTokenSecret } = loadConfig();
 
-if (!apiKey) {
-  logger.error('Missing required environment variable: API_KEY');
+if (!accessTokenSecret || !refreshTokenSecret) {
+  logger.error('Missing required environment variables: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET');
   process.exit(1);
 }
 

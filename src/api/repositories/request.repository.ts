@@ -98,6 +98,21 @@ export async function findById(
   return row ? toRequest(row, true) : null;
 }
 
+export async function isTechnicianAssigned(
+  requestId: string,
+  technicianId: string,
+): Promise<boolean> {
+  if (!isUuid(requestId) || !isUuid(technicianId)) {
+    return false;
+  }
+
+  ensureDb();
+  const count = await RequestAssignee.count({
+    where: { requestId, technicianId },
+  });
+  return count > 0;
+}
+
 /**
  * Блокирует строку заявки до конца транзакции: `SELECT ... FOR UPDATE`.
  * Без JOIN, чтобы PostgreSQL не отказал в блокировке nullable-стороны внешнего соединения.

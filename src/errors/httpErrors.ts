@@ -29,8 +29,14 @@ export class HttpAppError extends AppError {
 }
 
 export class UnauthorizedError extends HttpAppError {
-  constructor(message = 'Missing or invalid API key') {
+  constructor(message = 'Missing or invalid access token') {
     super(401, 'UNAUTHORIZED', message);
+  }
+}
+
+export class ForbiddenError extends HttpAppError {
+  constructor(message = 'Insufficient permissions') {
+    super(403, 'FORBIDDEN', message);
   }
 }
 
