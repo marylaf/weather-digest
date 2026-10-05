@@ -6,6 +6,7 @@ const DEFAULT_POOL_MAX = 5;
 const DEFAULT_POOL_MIN = 0;
 const DEFAULT_POOL_ACQUIRE_MS = 30_000;
 const DEFAULT_POOL_IDLE_MS = 10_000;
+const READINESS_TIMEOUT_MS = 3_000;
 
 export interface DatabaseConfig {
   host: string;
@@ -49,6 +50,33 @@ export function loadDatabaseConfig(): DatabaseConfig {
     poolAcquireMs: readOptionalInt('DB_POOL_ACQUIRE_MS', DEFAULT_POOL_ACQUIRE_MS, 1),
     poolIdleMs: readOptionalInt('DB_POOL_IDLE_MS', DEFAULT_POOL_IDLE_MS, 1),
   };
+}
+
+/**
+ * Проверка PostgreSQL для readiness.
+ * Соединение не закрываем: временный сбой не должен ронять пул и процесс.
+ */
+export async function checkDatabase(): Promise<void> {
+  const pending = getSequelize().authenticate();
+  // Если таймаут сработает раньше, отказ authenticate не должен стать unhandled rejection.
+  void pending.catch(() => undefined);
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    await Promise.race([
+      pending,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error('PostgreSQL readiness check timed out'));
+        }, READINESS_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 export async function connectDatabase(): Promise<void> {
