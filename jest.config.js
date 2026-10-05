@@ -20,6 +20,9 @@ const config = {
   },
   clearMocks: true,
   watchman: false,
+  collectCoverageFrom: ['src/**/*.ts'],
+  coverageDirectory: '<rootDir>/coverage',
+  coverageReporters: ['text', 'html', 'lcov'],
 };
 
 export default config;
