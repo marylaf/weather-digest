@@ -10,6 +10,7 @@ import { apiRateLimiter } from './middlewares/rateLimit.js';
 import { requestId } from './middlewares/requestId.js';
 import { requestLogger } from './middlewares/requestLogger.js';
 import { requireApiKey } from './middlewares/requireApiKey.js';
+import { authRouter } from './routes/auth.routes.js';
 import { equipmentRouter } from './routes/equipment.routes.js';
 import { healthRouter } from './routes/health.routes.js';
 import { reportRouter } from './routes/report.routes.js';
@@ -31,6 +32,7 @@ app.use(
 app.use(createCorsMiddleware());
 app.use(express.json({ limit: jsonBodyLimit }));
 app.use('/api', apiRateLimiter);
+app.use('/api/auth', authRouter);
 app.use('/api', requireApiKey);
 app.use('/api', healthRouter);
 app.use('/api/equipment', equipmentRouter);

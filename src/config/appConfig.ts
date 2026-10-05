@@ -1,5 +1,6 @@
-import type { AppConfig } from '../types/config.js';
+import type { AppConfig, CookieSameSite } from '../types/config.js';
 import {
+  DEFAULT_ACCESS_TOKEN_TTL_SECONDS,
   DEFAULT_CORS_ORIGINS,
   DEFAULT_FORECAST_URL,
   DEFAULT_GEOCODING_URL,
@@ -9,6 +10,7 @@ import {
   DEFAULT_PORT,
   DEFAULT_RATE_LIMIT_MAX,
   DEFAULT_RATE_LIMIT_WINDOW_MS,
+  DEFAULT_REFRESH_TOKEN_TTL_SECONDS,
   DEFAULT_TIMEOUT_MS,
   REPORTS_DIR,
 } from './constants.js';
@@ -40,6 +42,39 @@ export function loadConfig(): AppConfig {
     ),
     jsonBodyLimit: process.env.JSON_BODY_LIMIT?.trim() || DEFAULT_JSON_BODY_LIMIT,
     apiKey: process.env.API_KEY?.trim() ?? '',
+    ...readAuthConfig(),
+  };
+}
+
+function readAuthConfig(): Pick<
+  AppConfig,
+  | 'accessTokenSecret'
+  | 'refreshTokenSecret'
+  | 'accessTokenTtlSeconds'
+  | 'refreshTokenTtlSeconds'
+  | 'cookieSecure'
+  | 'cookieSameSite'
+> {
+  const cookieSecure = parseBoolean(
+    process.env.COOKIE_SECURE,
+    (process.env.NODE_ENV || DEFAULT_NODE_ENV) === 'production',
+  );
+
+  return {
+    accessTokenSecret: process.env.JWT_ACCESS_SECRET?.trim() ?? '',
+    refreshTokenSecret: process.env.JWT_REFRESH_SECRET?.trim() ?? '',
+    accessTokenTtlSeconds: parsePositiveInt(
+      process.env.JWT_ACCESS_TTL_SECONDS,
+      DEFAULT_ACCESS_TOKEN_TTL_SECONDS,
+      'JWT_ACCESS_TTL_SECONDS',
+    ),
+    refreshTokenTtlSeconds: parsePositiveInt(
+      process.env.JWT_REFRESH_TTL_SECONDS,
+      DEFAULT_REFRESH_TOKEN_TTL_SECONDS,
+      'JWT_REFRESH_TTL_SECONDS',
+    ),
+    cookieSecure,
+    cookieSameSite: parseSameSite(process.env.COOKIE_SAMESITE, cookieSecure),
   };
 }
 
@@ -94,6 +129,44 @@ function parsePositiveInt(raw: string | undefined, fallback: number, name: strin
   }
 
   return parsed;
+}
+
+function parseBoolean(raw: string | undefined, fallback: boolean): boolean {
+  if (raw === undefined || raw.trim() === '') {
+    return fallback;
+  }
+
+  const value = raw.trim().toLowerCase();
+
+  if (value === 'true' || value === '1') {
+    return true;
+  }
+
+  if (value === 'false' || value === '0') {
+    return false;
+  }
+
+  throw new Error('Invalid environment variable: COOKIE_SECURE must be true or false');
+}
+
+function parseSameSite(raw: string | undefined, cookieSecure: boolean): CookieSameSite {
+  if (raw === undefined || raw.trim() === '') {
+    return 'lax';
+  }
+
+  const value = raw.trim().toLowerCase();
+
+  if (value === 'lax' || value === 'strict' || value === 'none') {
+    if (value === 'none' && !cookieSecure) {
+      throw new Error(
+        'Invalid environment variable: COOKIE_SAMESITE=none requires COOKIE_SECURE=true',
+      );
+    }
+
+    return value;
+  }
+
+  throw new Error('Invalid environment variable: COOKIE_SAMESITE must be lax, strict, or none');
 }
 
 function parsePositiveNumber(raw: string | undefined, fallback: number): number {

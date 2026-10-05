@@ -21,6 +21,11 @@ export const DEFAULT_JSON_BODY_LIMIT = '100kb';
 export const API_KEY_HEADER = 'X-API-Key';
 export const MUTATING_METHODS = ['POST', 'PATCH', 'DELETE'] as const;
 
+export const DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 900;
+export const DEFAULT_REFRESH_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
+export const LOGIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+export const LOGIN_RATE_LIMIT_MAX = 10;
+
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 10;
 export const MAX_LIMIT = 100;
