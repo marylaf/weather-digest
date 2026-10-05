@@ -12,6 +12,7 @@ export const DEFAULT_UNITS = 'metric' as const;
 
 export const DEFAULT_PORT = 3_000;
 export const DEFAULT_NODE_ENV = 'development';
+export const DEFAULT_SHUTDOWN_TIMEOUT_MS = 10_000;
 
 export const DEFAULT_CORS_ORIGINS = ['http://localhost:5173', 'http://localhost:3000'] as const;
 export const DEFAULT_RATE_LIMIT_WINDOW_MS = 60_000;
